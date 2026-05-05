@@ -1,7 +1,7 @@
 
 import { FeatureCollection } from 'geojson';
 
-import { AutkChart, ChartEvent } from 'autk-plot';
+import { AutkPlot, PlotEvent } from 'autk-plot';
 import { AutkMap } from 'autk-map';
 import { MapEvent } from 'autk-map';
 
@@ -9,7 +9,7 @@ const URL = (import.meta as any).env.BASE_URL;
 
 export class MapD3 {
     protected map!: AutkMap;
-    protected plot!: AutkChart;
+    protected plot!: AutkPlot;
 
     protected geojson!: FeatureCollection;
 
@@ -34,13 +34,13 @@ export class MapD3 {
     }
 
     protected async loadAutkPlot(plotDiv: HTMLElement) {
-        this.plot = new AutkChart(plotDiv, {
+        this.plot = new AutkPlot(plotDiv, {
             type: 'scatterplot',
             collection: this.geojson,
             attributes: { axis: ['shape_area', 'shape_leng'] },
             labels: { axis: ['Area', 'Length'], title: 'Plot example' },
             width: 790,
-            events: [ChartEvent.CLICK]
+            events: [PlotEvent.CLICK]
         });
     }
 
@@ -55,7 +55,7 @@ export class MapD3 {
     }
 
     protected updatePlotListeners(layerId: string = 'neighborhoods') {
-        this.plot.events.on(ChartEvent.CLICK, ({ selection }) => {
+        this.plot.events.on(PlotEvent.CLICK, ({ selection }) => {
             this.map.setHighlightedIds(layerId, selection);
         });
     }

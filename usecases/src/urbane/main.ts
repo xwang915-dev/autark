@@ -3,7 +3,7 @@ import { FeatureCollection } from 'geojson';
 
 import { AutkSpatialDb } from 'autk-db';
 import { ComputeGpgpu, ComputeRender } from 'autk-compute';
-import { AutkChart, ChartEvent } from 'autk-plot';
+import { AutkPlot, PlotEvent } from 'autk-plot';
 import { AutkMap, LayerType, MapEvent } from 'autk-map';
 import { ColorMapDomainStrategy } from 'autk-core';
 
@@ -21,8 +21,8 @@ declare function setLoadingState(message: string, note?: string): void;
 export class Urbane {
     protected map!: AutkMap;
     protected db!: AutkSpatialDb;
-    protected table!: AutkChart;
-    protected parallel!: AutkChart;
+    protected table!: AutkPlot;
+    protected parallel!: AutkPlot;
 
     protected neighs!: FeatureCollection;
     protected activeBuildings!: FeatureCollection;
@@ -305,22 +305,22 @@ export class Urbane {
         const titleCol = this._currentLevel === 'neighborhoods' ? 'ntaname' : 'addr:street';
         const title = `${this._currentLevel} characteristics`;
 
-        this.parallel = new AutkChart(this.plotDivParallel, {
+        this.parallel = new AutkPlot(this.plotDivParallel, {
             type: 'parallel-coordinates',
             collection: plotData,
             attributes: { axis: attributes },
             labels: { axis: axisLabels, title },
             width: 790,
-            events: [ChartEvent.BRUSH_Y],
+            events: [PlotEvent.BRUSH_Y],
         });
 
-        this.table = new AutkChart(this.plotDivTable, {
+        this.table = new AutkPlot(this.plotDivTable, {
             type: 'table',
             collection: plotData,
             attributes: { axis: [titleCol, ...attributes] },
             labels: { axis: ['Id', ...axisLabels], title },
             width: 790,
-            events: [ChartEvent.CLICK],
+            events: [PlotEvent.CLICK],
         });
     }
 
@@ -345,7 +345,7 @@ export class Urbane {
      * and the other plot.
      */
     protected updatePlotListeners(): void {
-        this.table.events.on(ChartEvent.CLICK, ({ selection }) => {
+        this.table.events.on(PlotEvent.CLICK, ({ selection }) => {
             if (this._currentLevel === 'neighborhoods')
                 this.selectedNeighIds = selection;
 
@@ -353,7 +353,7 @@ export class Urbane {
             this.parallel.setSelection(selection);
         });
 
-        this.parallel.events.on(ChartEvent.BRUSH_Y, ({ selection }) => {
+        this.parallel.events.on(PlotEvent.BRUSH_Y, ({ selection }) => {
             if (this._currentLevel === 'neighborhoods')
                 this.selectedNeighIds = selection;
 
