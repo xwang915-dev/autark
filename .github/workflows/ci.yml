@@ -42,7 +42,7 @@ jobs:
         run: make build
 
       - name: Run stable Playwright test
-        run: make test-stable
+        run: make test
 
       - name: Upload Playwright report
         if: always()

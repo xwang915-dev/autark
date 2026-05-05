@@ -11,10 +11,10 @@ Steps:
 3. Run `make lint`.
 4. Run `make typecheck`.
 5. Run `make build`.
-6. Run `make test-stable`.
+6. Run `make test`.
 7. Upload Playwright reports/results as artifacts.
 
-`make test-stable` intentionally runs only:
+`make test` intentionally runs only one test by default:
 
 ```bash
 tests/gallery/autk-map/colormap-categorical.test.ts
@@ -29,11 +29,11 @@ CI validates already-committed baselines. It does not create new screenshots or 
 Use local commands to update baselines, then commit the generated files:
 
 ```bash
-make test-update APP=gallery OPEN=/src/autk-map/colormap-categorical.html images
-make test-update APP=gallery OPEN=/src/autk-map/some-osm-example.html cache images
+make test-update TEST=tests/gallery/autk-map/colormap-categorical.test.ts UPDATE=images
+make test-update TEST=tests/gallery/autk-map/osm-layers-api.test.ts UPDATE="cache images"
 ```
 
-For tests that call Overpass, `HAR_UPDATE=1` is set by `make test-update cache` and the helper in `tests/helpers/route-overpass-har.ts` records successful responses into `.har` files.
+For tests that call Overpass, including `cache` in `UPDATE` sets `HAR_UPDATE=1`, and the helper in `tests/helpers/route-overpass-har.ts` records successful responses into `.har` files.
 
 ## Publishing
 

@@ -1,10 +1,11 @@
-.PHONY: lint typecheck build build-libs build-all docs verify test test-stable test-update test-ui test-codegen dev clean cache images
+.PHONY: lint typecheck build docs verify test test-update dev clean
 
 CONCURRENTLY := npx concurrently
 RIMRAF := npx rimraf
 
 APP ?= gallery
-STABLE_TEST ?= tests/gallery/autk-map/colormap-categorical.test.ts
+TEST ?= tests/gallery/autk-map/colormap-categorical.test.ts
+UPDATE ?= cache images
 
 lint:
 	npm run lint
@@ -20,17 +21,13 @@ typecheck:
 		"cd gallery && npx tsc --noEmit --skipLibCheck" \
 		"cd usecases && npx tsc --noEmit --skipLibCheck"
 
-build-libs:
+build:
 	$(CONCURRENTLY) \
 		"cd autk-map && npm run build" \
 		"cd autk-db && npm run build" \
 		"cd autk-plot && npm run build" \
 		"cd autk-compute && npm run build"
-
-build: build-libs
 	cd autk && npm run build
-
-build-all: build
 
 docs:
 	$(CONCURRENTLY) \
@@ -41,42 +38,18 @@ docs:
 
 verify: lint typecheck build
 
-ifdef OPEN
-TEST_TARGET = tests/$(APP)/$(shell echo '$(OPEN)' | sed 's|^/||' | sed 's|^src/||' | sed 's|/$$||' | sed 's|\.[^./]*$$||')
-else
-TEST_TARGET = tests/$(APP)
-endif
-
-CODEGEN_TARGET = src/$(shell echo '$(OPEN)' | sed 's|^/||' | sed 's|^src/||' | sed 's|/$$||' | sed 's|\.[^./]*$$||')
-
 test:
-	APP=$(APP) OPEN=$(OPEN) npx playwright test $(if $(OPEN),$(TEST_TARGET).test.ts,$(TEST_TARGET))
+	APP=$(APP) npx playwright test $(TEST)
 
-test-stable:
-	APP=gallery npx playwright test $(STABLE_TEST)
-
-# make test-update               → update both cache (HAR) and images (snapshots)
-# make test-update cache         → update HAR files only
-# make test-update images        → update snapshots only
-# make test-update cache images  → update both explicitly
-_CACHE  := $(filter cache,$(MAKECMDGOALS))
-_IMAGES := $(filter images,$(MAKECMDGOALS))
-_BOTH   := $(if $(or $(_CACHE),$(_IMAGES)),,1)
-
+# Update committed test baselines locally.
+# Examples:
+#   make test-update TEST=tests/gallery/autk-map/colormap-categorical.test.ts UPDATE=images
+#   make test-update TEST=tests/gallery/autk-map/osm-layers-api.test.ts UPDATE="cache images"
 test-update:
-	APP=$(APP) OPEN=$(OPEN) \
-	$(if $(or $(_CACHE),$(_BOTH)),HAR_UPDATE=1) \
-	npx playwright test $(if $(OPEN),$(TEST_TARGET).test.ts,$(TEST_TARGET)) \
-	$(if $(or $(_IMAGES),$(_BOTH)),--update-snapshots)
-
-cache images:
-	@true
-
-test-ui:
-	APP=$(APP) OPEN=$(OPEN) npx playwright test --ui $(if $(OPEN),$(TEST_TARGET).test.ts,$(TEST_TARGET))
-
-test-codegen:
-	node playwright.codegen.mjs http://localhost:5173$(OPEN) $(if $(OPEN),$(TEST_TARGET).test.ts)
+	APP=$(APP) \
+	$(if $(findstring cache,$(UPDATE)),HAR_UPDATE=1) \
+	npx playwright test $(TEST) \
+	$(if $(findstring images,$(UPDATE)),--update-snapshots)
 
 dev:
 	npm install

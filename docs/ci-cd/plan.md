@@ -27,8 +27,14 @@
 Only one visual test is required in CI for now:
 
 ```bash
-make test-stable
-# runs tests/gallery/autk-map/colormap-categorical.test.ts
+make test
+# runs tests/gallery/autk-map/colormap-categorical.test.ts by default
+```
+
+To run another test locally:
+
+```bash
+make test TEST=tests/gallery/autk-map/osm-layers-api.test.ts
 ```
 
 CI validates committed screenshots/HAR files. It does not generate or commit new baselines.
@@ -36,8 +42,8 @@ CI validates committed screenshots/HAR files. It does not generate or commit new
 For local baseline updates:
 
 ```bash
-make test-update APP=gallery OPEN=/src/autk-map/colormap-categorical.html images
-make test-update APP=gallery OPEN=/src/autk-map/some-osm-example.html cache images
+make test-update TEST=tests/gallery/autk-map/colormap-categorical.test.ts UPDATE=images
+make test-update TEST=tests/gallery/autk-map/osm-layers-api.test.ts UPDATE="cache images"
 ```
 
 Commit updated `.png` and `.har` files with the code change.
