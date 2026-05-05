@@ -1,0 +1,77 @@
+# CI/CD Setup Details
+
+## CI
+
+`.github/workflows/ci.yml` runs on PRs to `main` and pushes to `main`.
+
+Steps:
+
+1. Install dependencies with `npm install` because `package-lock.json` is ignored in this repo.
+2. Install Playwright Chromium with `npx playwright install chromium`.
+3. Run `make lint`.
+4. Run `make typecheck`.
+5. Run `make build`.
+6. Run `make test-stable`.
+7. Upload Playwright reports/results as artifacts.
+
+`make test-stable` intentionally runs only:
+
+```bash
+tests/gallery/autk-map/colormap-categorical.test.ts
+```
+
+This keeps CI conservative while the rest of the visual regression suite is stabilized.
+
+## Screenshots and HAR files
+
+CI validates already-committed baselines. It does not create new screenshots or HAR files.
+
+Use local commands to update baselines, then commit the generated files:
+
+```bash
+make test-update APP=gallery OPEN=/src/autk-map/colormap-categorical.html images
+make test-update APP=gallery OPEN=/src/autk-map/some-osm-example.html cache images
+```
+
+For tests that call Overpass, `HAR_UPDATE=1` is set by `make test-update cache` and the helper in `tests/helpers/route-overpass-har.ts` records successful responses into `.har` files.
+
+## Publishing
+
+`.github/workflows/publish.yml` runs after the `CI` workflow succeeds on `main`.
+
+For each package:
+
+- reads `package.json` version
+- checks `npm view <package>@<version> version`
+- skips if that version already exists
+- publishes with `npm publish ./<package> --access public --provenance` if missing
+- creates a git tag `<package>@<version>` if missing
+
+Published packages:
+
+- `autk-map`
+- `autk-db`
+- `autk-plot`
+- `autk-compute`
+- `autk`
+
+Required secret:
+
+- `NPM_TOKEN`
+
+## Umbrella package
+
+The new `autk` package re-exports all packages as namespaces:
+
+```ts
+import { map, db, compute, plot } from 'autk';
+```
+
+It also supports subpath imports:
+
+```ts
+import { SomeMapExport } from 'autk/map';
+import { SomeDbExport } from 'autk/db';
+import { SomeComputeExport } from 'autk/compute';
+import { SomePlotExport } from 'autk/plot';
+```

@@ -1,12 +1,10 @@
-.PHONY: install lint typecheck build build-all docs verify test test-update test-ui test-codegen dev map db plot compute clean publish
+.PHONY: lint typecheck build build-libs build-all docs verify test test-stable test-update test-ui test-codegen dev clean cache images
 
 CONCURRENTLY := npx concurrently
 RIMRAF := npx rimraf
 
 APP ?= gallery
-
-LIB_PACKAGES := autk-map autk-db autk-plot autk-compute
-DOC_PACKAGES := $(LIB_PACKAGES)
+STABLE_TEST ?= tests/gallery/autk-map/colormap-categorical.test.ts
 
 lint:
 	npm run lint
@@ -18,22 +16,21 @@ typecheck:
 		"cd autk-db && npx tsc --noEmit --skipLibCheck" \
 		"cd autk-plot && npx tsc --noEmit --skipLibCheck" \
 		"cd autk-compute && npx tsc --noEmit --skipLibCheck" \
+		"cd autk && npx tsc --noEmit --skipLibCheck" \
 		"cd gallery && npx tsc --noEmit --skipLibCheck" \
 		"cd usecases && npx tsc --noEmit --skipLibCheck"
 
-build:
+build-libs:
 	$(CONCURRENTLY) \
 		"cd autk-map && npm run build" \
 		"cd autk-db && npm run build" \
 		"cd autk-plot && npm run build" \
 		"cd autk-compute && npm run build"
 
-build-all:
-	$(CONCURRENTLY) \
-		"cd autk-map && npm run build" \
-		"cd autk-db && npm run build" \
-		"cd autk-plot && npm run build" \
-		"cd autk-compute && npm run build"
+build: build-libs
+	cd autk && npm run build
+
+build-all: build
 
 docs:
 	$(CONCURRENTLY) \
@@ -42,7 +39,7 @@ docs:
 		"cd autk-plot && npm run doc" \
 		"cd autk-compute && npm run doc"
 
-verify: lint typecheck build-all docs
+verify: lint typecheck build
 
 ifdef OPEN
 TEST_TARGET = tests/$(APP)/$(shell echo '$(OPEN)' | sed 's|^/||' | sed 's|^src/||' | sed 's|/$$||' | sed 's|\.[^./]*$$||')
@@ -55,10 +52,13 @@ CODEGEN_TARGET = src/$(shell echo '$(OPEN)' | sed 's|^/||' | sed 's|^src/||' | s
 test:
 	APP=$(APP) OPEN=$(OPEN) npx playwright test $(if $(OPEN),$(TEST_TARGET).test.ts,$(TEST_TARGET))
 
-# make test-update          → update both cache (HAR) and images (snapshots)
-# make test-update cache    → update HAR files only
-# make test-update images   → update snapshots only
-# make test-update cache images → update both explicitly
+test-stable:
+	APP=gallery npx playwright test $(STABLE_TEST)
+
+# make test-update               → update both cache (HAR) and images (snapshots)
+# make test-update cache         → update HAR files only
+# make test-update images        → update snapshots only
+# make test-update cache images  → update both explicitly
 _CACHE  := $(filter cache,$(MAKECMDGOALS))
 _IMAGES := $(filter images,$(MAKECMDGOALS))
 _BOTH   := $(if $(or $(_CACHE),$(_IMAGES)),,1)
@@ -78,7 +78,6 @@ test-ui:
 test-codegen:
 	node playwright.codegen.mjs http://localhost:5173$(OPEN) $(if $(OPEN),$(TEST_TARGET).test.ts)
 
-
 dev:
 	npm install
 	make build
@@ -87,20 +86,8 @@ dev:
 		"cd autk-db && npm run dev-build" \
 		"cd autk-plot && npm run dev-build" \
 		"cd autk-compute && npm run dev-build" \
+		"cd autk && npm run dev-build" \
 		"cd $(APP) && VITE_OPEN=\"$(OPEN)\" npm run dev"
-
-map:
-	cd autk-map && npm run build
-
-db:
-	cd autk-db && npm run build
-
-plot:
-	cd autk-plot && npm run build
-
-compute:
-	cd autk-compute && npm run build
-
 
 clean:
 	$(RIMRAF) node_modules
@@ -109,17 +96,6 @@ clean:
 		"cd autk-db && $(RIMRAF) dist build" \
 		"cd autk-plot && $(RIMRAF) dist build" \
 		"cd autk-compute && $(RIMRAF) dist build" \
+		"cd autk && $(RIMRAF) dist build" \
 		"cd gallery && $(RIMRAF) dist build" \
 		"cd usecases && $(RIMRAF) dist build"
-
-publish:
-	@if [ -z "$(LIB)" ]; then \
-		echo "Error: Please specify a library to publish using LIB=<library>"; \
-		echo "Usage: make publish LIB=autk-map|autk-db|autk-plot|autk-compute"; \
-		exit 1; \
-	fi
-	@if [ "$(LIB)" != "autk-map" ] && [ "$(LIB)" != "autk-db" ] && [ "$(LIB)" != "autk-plot" ] && [ "$(LIB)" != "autk-compute" ]; then \
-		echo "Error: LIB must be one of: autk-map, autk-db, autk-plot, autk-compute"; \
-		exit 1; \
-	fi
-	cd $(LIB) && npm pack && npm publish *.tgz
