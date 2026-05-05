@@ -13,12 +13,29 @@
 - [Examples](https://autarkjs.org/gallery/)
 - [Use Cases](https://autarkjs.org/usecases/)
 
+## Usage
+
+```ts
+import { AutkPlot, PlotEvent } from 'autk-plot';
+
+const plot = new AutkPlot(container, {
+  type: 'scatterplot',
+  collection,
+  attributes: { axis: ['x', 'y'] },
+  events: [PlotEvent.CLICK],
+});
+
+plot.events.on(PlotEvent.CLICK, ({ selection }) => {
+  console.log(selection);
+});
+```
+
 ## Transformation Architecture
 
 `autk-plot` exposes a shared transformation layer under `src/transforms/`:
 
 - `kernel.ts`: low-level primitives such as bucket reduction and provenance-safe `autkIds` merging.
-- `presets/*.ts`: preset runners for the supported chart workflows.
+- `presets/*.ts`: preset runners for the supported plot workflows.
 - `index.ts`: the public transform entrypoint that re-exports helpers and the top-level `run(...)` dispatcher.
 
 The invariant is:
@@ -31,7 +48,7 @@ The invariant is:
 import {
   run,
   reduceBuckets,
-  type ChartTransformConfig,
+  type PlotTransformConfig,
   type TransformResolution,
   type TransformReducer,
 } from 'autk-plot';
@@ -53,7 +70,7 @@ const rows = collection.features.map((f, idx) => ({
   autkIds: [idx],
 }));
 
-const config: ChartTransformConfig = {
+const config: PlotTransformConfig = {
   preset: 'binning-events',
   options: {
     resolution: 'month',
