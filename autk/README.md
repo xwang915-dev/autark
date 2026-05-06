@@ -59,26 +59,6 @@ import { AutkComputeEngine } from '@urban-toolkit/autk/compute';
 import { AutkPlot, PlotEvent } from '@urban-toolkit/autk/plot';
 ```
 
-### API summary
-
-* `import { db } from '@urban-toolkit/autk'`: Namespace export for `@urban-toolkit/autk-db`.
-* `import { compute } from '@urban-toolkit/autk'`: Namespace export for `@urban-toolkit/autk-compute`.
-* `import { map } from '@urban-toolkit/autk'`: Namespace export for `@urban-toolkit/autk-map`.
-* `import { plot } from '@urban-toolkit/autk'`: Namespace export for `@urban-toolkit/autk-plot`.
-* `@urban-toolkit/autk/db`: Subpath export for direct database imports.
-* `@urban-toolkit/autk/compute`: Subpath export for direct compute imports.
-* `@urban-toolkit/autk/map`: Subpath export for direct map imports.
-* `@urban-toolkit/autk/plot`: Subpath export for direct plot imports.
-
-If you only need one part of the toolkit, install the individual package instead:
-
-```bash
-npm install @urban-toolkit/autk-db
-npm install @urban-toolkit/autk-compute
-npm install @urban-toolkit/autk-map
-npm install @urban-toolkit/autk-plot
-```
-
 ## Resources
 
 - [Documentation](https://autarkjs.org/introduction.html)
