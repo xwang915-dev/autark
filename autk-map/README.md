@@ -13,12 +13,12 @@ The toolkit is available as the umbrella package `@urban-toolkit/autk` or as ind
 
 * `@urban-toolkit/autk-db`: In-browser spatial database for urban datasets.
 * `@urban-toolkit/autk-compute`: WebGPU computation engine for analytical and render-based pipelines.
-* `@urban-toolkit/autk-map`: WebGPU 2D/3D map visualization library.
+* `@urban-toolkit/autk-map`: WebGPU-based 2D/3D vector map visualization library.
 * `@urban-toolkit/autk-plot`: D3.js-based plotting library for linked urban data views.
 
-## Map visualization
+## @urban-toolkit/autk-map
 
-`@urban-toolkit/autk-map` is a WebGPU-based map visualization library for rendering urban vector and raster layers. It can display GeoJSON-derived points, polylines, polygons, buildings, parks, water, roads, and GeoTIFF-derived raster data, with support for thematic color mapping, picking, highlighting, layer visibility, and map UI controls.
+`@urban-toolkit/autk-map` is a WebGPU-based vector map visualization library for rendering urban layers. It can display GeoJSON-derived points, polylines, polygons, buildings, parks, water, roads, and GeoTIFF-derived raster data, with support for thematic color mapping, picking, highlighting, layer visibility, and map UI controls.
 
 ### Basic usage
 

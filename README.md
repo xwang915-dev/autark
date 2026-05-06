@@ -20,7 +20,7 @@ For demonstration and documentation purposes, we created a large collection of e
 
 ## Installation
 
-Autark packages are available on NPM. Install the complete package when you want the full toolkit:
+Autark packages are available on npm. Install the complete package when you want the full toolkit:
 
 ```bash
 npm install @urban-toolkit/autk
@@ -61,6 +61,7 @@ After installing Node.js and GNU Make, run the following command from the projec
 ```bash
 make dev
 ```
+
 This command starts a development server for the default `gallery` examples folder. You can specify a different examples folder using the `APP` variable and a specific file using `OPEN`:
 
 ```bash

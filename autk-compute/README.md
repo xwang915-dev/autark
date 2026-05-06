@@ -13,10 +13,10 @@ The toolkit is available as the umbrella package `@urban-toolkit/autk` or as ind
 
 * `@urban-toolkit/autk-db`: In-browser spatial database for urban datasets.
 * `@urban-toolkit/autk-compute`: WebGPU computation engine for analytical and render-based pipelines.
-* `@urban-toolkit/autk-map`: WebGPU 2D/3D map visualization library.
+* `@urban-toolkit/autk-map`: WebGPU-based 2D/3D vector map visualization library.
 * `@urban-toolkit/autk-plot`: D3.js-based plotting library for linked urban data views.
 
-## Compute engine
+## @urban-toolkit/autk-compute
 
 `@urban-toolkit/autk-compute` provides WebGPU pipelines for running analysis over GeoJSON feature collections. It includes a GPGPU pipeline for custom WGSL expressions over feature attributes and a render pipeline for visibility-style metrics from sampled viewpoints. Results are written back to `feature.properties.compute` on the returned collection.
 

@@ -9,16 +9,16 @@
 
 **Autark** is a serverless, modular TypeScript toolkit for prototyping urban visual analytics systems entirely in the browser. It supports client-side workflows for loading, storing, querying, joining, computing, and visualizing physical and thematic urban data using standard formats such as OpenStreetMap, GeoJSON, GeoTIFF, and CSV.
 
-The toolkit is available as the umbrella package `@urban-toolkit/autk` or as individual modules:
+The toolkit is available as a complete package `@urban-toolkit/autk` or as individual modules:
 
 * `@urban-toolkit/autk-db`: In-browser spatial database for urban datasets.
 * `@urban-toolkit/autk-compute`: WebGPU computation engine for analytical and render-based pipelines.
-* `@urban-toolkit/autk-map`: WebGPU 2D/3D map visualization library.
+* `@urban-toolkit/autk-map`: WebGPU-based 2D/3D vector map visualization library.
 * `@urban-toolkit/autk-plot`: D3.js-based plotting library for linked urban data views.
 
-## Umbrella package
+## Complete package
 
-`@urban-toolkit/autk` re-exports the Autark modules from a single package. Use it when you want the full toolkit available through one dependency, while still keeping module boundaries clear through namespace and subpath imports.
+`@urban-toolkit/autk` re-exports the Autark modules from a single package. Use it when you want the full toolkit available through one dependency while still keeping module boundaries clear through namespace and subpath imports.
 
 ### Installation
 
