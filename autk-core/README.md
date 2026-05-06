@@ -1,38 +1,40 @@
-# Autark: A Serverless Toolkit for Prototyping Urban Visual Analytics Systems
 <div align="center">
-  <img src="../logo.png" alt="Autark Logo" height="200"/></br>
+  <img src="../logo.png" alt="Autark Logo" height="150"/></br>
+
+  <h1>autk-core</h1>
+
+  <br>
+  <p><strong>Shared runtime foundation for the Autark toolkit.</strong></p>
+
+  <p>
+    <a href="https://arxiv.org/abs/2604.20759">Paper</a> ·
+    <a href="https://autarkjs.org/">Website</a>
+  </p>  
 </div>
 <br>
 
-**Autark** is a modular and serverless toolkit built in TypeScript to streamline the implementation and deployment of urban visual analytics systems. 
+## Autark toolkit
 
-It provides a client-side platform for the complete implementation of urban visual analytics systems. It supports loading, storing, querying, joining, and exporting both physical and thematic urban data using standard formats like OpenStreetMap, GeoJSON, and GeoTIFF. Employing GPU acceleration, it allows for fast implementations of urban analysis algorithms. Finally, it provides a collection of interactive plots and a 3D map for visualizing urban data.
+**Autark** is a serverless, modular TypeScript toolkit for prototyping urban visual analytics systems entirely in the browser. It supports client-side workflows for loading, storing, querying, joining, computing, and visualizing physical and thematic urban data using standard formats such as OpenStreetMap, GeoJSON, GeoTIFF, and CSV.
 
-Autark is composed of four modules:
+The toolkit is available as the complete package `@urban-toolkit/autk` or as individual modules:
 
-* `autk-db`: A spatial database that handles physical and thematic urban datasets.
-* `autk-compute`: a WebGPU based general-purpose computation engine to implement general-purpose algorithms using physical and thematic data.
-* `autk-map`: A map visualization library that allows the exploration of 2D and 3D physical and thematical layers.
-* `autk-plot`: A d3.js based plot library designed to consume urban data in standard formats and create linked views.
+* `@urban-toolkit/autk-db`: In-browser spatial database for urban datasets.
+* `@urban-toolkit/autk-compute`: WebGPU computation engine for analytical and render-based pipelines.
+* `@urban-toolkit/autk-map`: WebGPU-based 2D/3D vector map visualization library.
+* `@urban-toolkit/autk-plot`: D3.js-based plotting library for linked urban data views.
 
-For demonstration purposes and to facilitate the adoption of Autark, we created a large collection of simple examples illustrating the core functionalities of each module. We also provide several examples on how to combine several modules to build complex applications. All examples are organized in the `example/` directory.
+## Shared core package
 
-# autk-core
+`autk-core` is the shared runtime foundation for the Autark toolkit. It contains the data structures, math helpers, triangulators, camera utilities, color utilities, and event primitives used by the other packages.
 
-`autk-core` is the shared runtime foundation for the Autark toolkit.
-
-It concentrates the data structures, math helpers, triangulators, and camera/
-color/event primitives that the other packages build on. In practice, `autk-core`
-is where GeoJSON data is normalized, interpreted, and turned into the common
-mesh and rendering-friendly shapes consumed by:
-
-## What’s inside
+## What is inside
 
 `autk-core` groups its exports around a few responsibilities:
 
 - Color mapping: `ColorMap`, `ColorMapDomainStrategy`, `ColorMapInterpolator`, `ColorMapConfig`
 - Transfer functions: `DEFAULT_TRANSFER_FUNCTION`, `buildTransferContext`, `computeAlphaByte`
-- Camera: `Camera`, `CameraMotion`, `CameraData`, `ViewProjectionParams`
+- Camera utilities: `Camera`, `CameraMotion`, `CameraData`, `ViewProjectionParams`
 - Events: `EventEmitter`, `EventListener`, `SelectionData`
 - Mesh types: `LayerGeometry`, `LayerComponent`, `LayerBorder`, `LayerBorderComponent`
 - Geometry utilities: `computeOrigin`, `computeBoundingBox`, `computeGeometryCentroid`, `offsetPolyline`, `normalizeRing`, `computePointConvexHull`, `computeRingArea`, `polygonPerimeter`, `isConvex`
@@ -45,6 +47,6 @@ The complete export list lives in [`src/index.ts`](./src/index.ts).
 
 ## Notes
 
-- Geometry helpers assume planar coordinates unless a function says otherwise.
+- Geometry helpers assume planar coordinates unless a function states otherwise.
 - Triangulators convert GeoJSON and related feature data into render-ready mesh buffers.
 - For implementation details and exact exports, use `src/index.ts` as the source of truth.

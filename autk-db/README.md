@@ -1,7 +1,15 @@
-# @urban-toolkit/autk-db
-
 <div align="center">
-  <img src="../logo.png" alt="Autark Logo" height="200"/></br>
+  <img src="../logo.png" alt="Autark Logo" height="150"/></br>
+
+  <h1>@urban-toolkit/autk-db</h1>
+
+  <br>
+  <p><strong>In-browser spatial database for urban datasets.</strong></p>
+
+  <p>
+    <a href="https://arxiv.org/abs/2604.20759">Paper</a> ·
+    <a href="https://autarkjs.org/">Website</a>
+  </p>  
 </div>
 <br>
 
@@ -13,12 +21,12 @@ The toolkit is available as the umbrella package `@urban-toolkit/autk` or as ind
 
 * `@urban-toolkit/autk-db`: In-browser spatial database for urban datasets.
 * `@urban-toolkit/autk-compute`: WebGPU computation engine for analytical and render-based pipelines.
-* `@urban-toolkit/autk-map`: WebGPU 2D/3D map visualization library.
+* `@urban-toolkit/autk-map`: WebGPU-based 2D/3D vector map visualization library.
 * `@urban-toolkit/autk-plot`: D3.js-based plotting library for linked urban data views.
 
-## Spatial database
+## @urban-toolkit/autk-db
 
-`@urban-toolkit/autk-db` provides an in-browser spatial database built on DuckDB-Wasm and its spatial extension. It helps applications load urban datasets, organize them into workspaces, run spatial joins and custom SQL, and export layers as GeoJSON for use with `autk-map`, `autk-plot`, or other tools.
+`@urban-toolkit/autk-db` provides an in-browser spatial database built on DuckDB-Wasm and its spatial extension. It helps applications load urban datasets, organize them into workspaces, run spatial joins and custom SQL queries, and export layers as GeoJSON for use with `autk-map`, `autk-plot`, or other tools.
 
 ### Basic usage
 
