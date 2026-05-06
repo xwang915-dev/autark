@@ -1,7 +1,15 @@
-# @urban-toolkit/autk-plot
-
 <div align="center">
-  <img src="../logo.png" alt="Autark Logo" height="200"/></br>
+  <img src="../logo.png" alt="Autark Logo" height="150"/></br>
+
+  <h1>@urban-toolkit/autk-plot</h1>
+
+  <br>
+  <p><strong>D3.js-based plotting library for linked urban data views.</strong></p>
+
+  <p>
+    <a href="https://arxiv.org/abs/2604.20759">Paper</a> ·
+    <a href="https://autarkjs.org/">Website</a>
+  </p>  
 </div>
 <br>
 

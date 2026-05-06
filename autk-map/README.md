@@ -1,7 +1,15 @@
-# @urban-toolkit/autk-map
-
 <div align="center">
-  <img src="../logo.png" alt="Autark Logo" height="200"/></br>
+  <img src="../logo.png" alt="Autark Logo" height="150"/></br>
+
+  <h1>@urban-toolkit/autk-map</h1>
+
+  <br>
+  <p><strong>WebGPU-based 2D/3D vector map visualization library.</strong></p>
+
+  <p>
+    <a href="https://arxiv.org/abs/2604.20759">Paper</a> ·
+    <a href="https://autarkjs.org/">Website</a>
+  </p>  
 </div>
 <br>
 
