@@ -591,6 +591,13 @@ export class Renderer {
      * @throws Never throws.
      */
     destroy(): void {
+        // Mark uninitialized first so that any tick that races with destroy()
+        // (e.g. an in-flight animation frame from a sibling renderer that
+        // shares the canvas's GPUCanvasContext) sees `_isInitialized === false`
+        // and bails out of `start()` / `beginMainRenderPass()` before touching
+        // the resources we are about to release below.
+        this._isInitialized = false;
+
         this._multisampleTexture?.destroy();
         this._depthTexture?.destroy();
         this._pickingTexture?.destroy();
@@ -599,7 +606,6 @@ export class Renderer {
         this._context?.unconfigure();
 
         this._commandEncoder = null;
-        this._isInitialized = false;
     }
 
     /** Ensures a command encoder exists for the current frame. */
