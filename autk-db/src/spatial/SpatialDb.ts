@@ -35,6 +35,7 @@ import { toPlain } from './shared/utils';
 
 interface WorkspaceData {
   tables: Array<Table>;
+  workspaceBoundingBox?: BoundingBox;
   osmBoundingBox?: BoundingBox;
   osmBoundingBoxWgs84?: BoundingBox;
 }
@@ -117,6 +118,7 @@ export class AutkSpatialDb {
     await this.conn.query('CREATE SCHEMA IF NOT EXISTS main');
     this.workspaces.set('main', {
       tables: [],
+      workspaceBoundingBox: undefined,
       osmBoundingBox: undefined,
     });
 
@@ -159,6 +161,7 @@ export class AutkSpatialDb {
       await this.conn.query(`CREATE SCHEMA IF NOT EXISTS ${name}`);
       this.workspaces.set(name, {
         tables: [],
+        workspaceBoundingBox: undefined,
         osmBoundingBox: undefined,
       });
     }
@@ -278,6 +281,7 @@ export class AutkSpatialDb {
         boundingBox: rawBoundingBox,
         coordinateFormat: params.autoLoadLayers.coordinateFormat,
       });
+      workspaceData.workspaceBoundingBox = workspaceData.osmBoundingBox;
 
       let surfaceLayerName: string | null = null;
       const clippableLayerNames: string[] = [];
@@ -401,7 +405,13 @@ export class AutkSpatialDb {
    * @throws Error if the database or connection is not initialized.
    */
   async loadCustomLayer(params: LoadCustomLayerParams): Promise<CustomLayerTable> {
-    if (!this.db || !this.conn || !this.loadCustomLayerUseCase || !this.assignBuildingIdsUseCase)
+    if (
+      !this.db ||
+      !this.conn ||
+      !this.loadCustomLayerUseCase ||
+      !this.assignBuildingIdsUseCase ||
+      !this.getBoundingBoxFromLayerUseCase
+    )
       throw new Error('Database not initialized. Please call init() first.');
 
     const workspaceData = this.getCurrentWorkspaceData();
@@ -411,6 +421,13 @@ export class AutkSpatialDb {
       workspace: this.currentWorkspace 
     });
     this._registerTable(table);
+
+    if (!workspaceData.workspaceBoundingBox) {
+      workspaceData.workspaceBoundingBox = await this.getBoundingBoxFromLayerUseCase.exec({
+        layerTableName: table.name,
+        workspace: this.currentWorkspace,
+      });
+    }
 
     // When loading as buildings, compute building_id by clustering overlapping geometries
     if (params.layerType === 'buildings') {
@@ -774,7 +791,7 @@ export class AutkSpatialDb {
       throw new Error('Database not initialized. Please call init() first.');
 
     const workspaceData = this.getCurrentWorkspaceData();
-    const table = await this.buildHeatmapUseCase.exec(params, workspaceData.tables, workspaceData.osmBoundingBox);
+    const table = await this.buildHeatmapUseCase.exec(params, workspaceData.tables, workspaceData.workspaceBoundingBox);
     this._registerTable(table);
 
     return table;
