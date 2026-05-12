@@ -13,19 +13,10 @@ export class Heatmap {
         this.db = new AutkSpatialDb();
         await this.db.init();
 
-        await this.db.loadOsm({
-            queryArea: {
-                geocodeArea: 'New York',
-                areas: ['Battery Park City', 'Financial District'],
-            },
-            outputTableName: 'table_osm',
-            autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
-                layers: ['surface', 'parks', 'water', 'roads'] as Array<
-                    'surface' | 'parks' | 'water' | 'roads' | 'buildings'
-                >,
-                dropOsmTable: true,
-            },
+       await this.db.loadCustomLayer({
+            geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
+            outputTableName: 'neighborhoods',
+            coordinateFormat: 'EPSG:3395'
         });
 
         await this.db.loadCsv({
@@ -38,14 +29,13 @@ export class Heatmap {
             },
         });
 
-        console.log('Building heatmap...');
         await this.db.buildHeatmap({
             tableJoinName: 'noise',
             nearDistance: 1000,
             outputTableName: 'heatmap',
             grid: {
-                rows: 20,
-                columns: 20,
+                rows: 30,
+                columns: 30,
             },
             groupBy: {
                 selectColumns: [
@@ -57,7 +47,6 @@ export class Heatmap {
                 ],
             },
         });
-
 
         const canvas = document.querySelector('canvas');
         if (canvas) {

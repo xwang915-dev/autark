@@ -575,9 +575,17 @@ export class AutkSpatialDb {
 
     const featureCollection = await this.getLayerGeojsonUseCase.exec(layerTable as LayerTable | CustomLayerTable, this.currentWorkspace);
 
+    const workspaceData = this.getCurrentWorkspaceData();
     const osmBoundingBox = this.getOsmBoundingBox();
     if (osmBoundingBox) {
       featureCollection.bbox = osmBoundingBox;
+    } else if (layerTable.type === 'raster' && workspaceData.workspaceBoundingBox) {
+      featureCollection.bbox = [
+        workspaceData.workspaceBoundingBox.minLon,
+        workspaceData.workspaceBoundingBox.minLat,
+        workspaceData.workspaceBoundingBox.maxLon,
+        workspaceData.workspaceBoundingBox.maxLat,
+      ];
     } else {
       const layerBoundingBox = await this.getBoundingBoxFromLayer(layerTableName);
       featureCollection.bbox = [
