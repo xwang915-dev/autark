@@ -1,7 +1,7 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { CustomLayerTable } from '../../../shared/interfaces';
 import { LoadCustomLayerParams } from './interfaces';
-import { DEFALT_COORDINATE_FORMAT } from '../../../shared/consts';
+import { DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../../shared/consts';
 import { LOAD_FEATURE_COLLECTION_QUERY, LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
 import { FeatureCollection } from 'geojson';
@@ -24,11 +24,12 @@ export class LoadCustomLayerUseCase {
     geojsonFileUrl,
     geojsonObject,
     outputTableName,
-    coordinateFormat = DEFALT_COORDINATE_FORMAT,
+    coordinateFormat,
     boundingBox,
     workspace = 'main',
     layerType,
-  }: LoadCustomLayerParams): Promise<CustomLayerTable> {
+    workspaceCoordinateFormat = DEFAULT_WORKSPACE_COORDINATE_FORMAT,
+  }: LoadCustomLayerParams & { workspaceCoordinateFormat?: string }): Promise<CustomLayerTable> {
     if (!geojsonFileUrl && !geojsonObject) {
       throw new Error('Either geojsonFileUrl or geojsonObject must be provided');
     }
@@ -52,7 +53,6 @@ export class LoadCustomLayerUseCase {
       throw new Error(`Invalid GeoJSON type! Just accepting FeatureCollection for now!`);
     }
 
-    // Extract geometry type from the first feature
     if (!geojson.features || geojson.features.length === 0) {
       throw new Error('FeatureCollection is empty - no features found');
     }
@@ -63,11 +63,13 @@ export class LoadCustomLayerUseCase {
     }
 
     const geometryType = layerType ?? mapGeometryTypeToLayerType(firstFeature.geometry.type);
+    const sourceCrs = coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT;
 
     const describeTableResponse = await this.createTableFromFeatureCollection(
       geojson,
       outputTableName,
-      coordinateFormat,
+      sourceCrs,
+      workspaceCoordinateFormat,
       workspace,
       boundingBox,
     );
@@ -83,25 +85,23 @@ export class LoadCustomLayerUseCase {
   private async createTableFromFeatureCollection(
     geojson: FeatureCollection,
     outputTableName: string,
-    coordinateFormat: string,
+    sourceCrs: string,
+    targetCrs: string,
     workspace: string,
     boundingBox?: BoundingBox,
   ) {
-    // Create temporary file with GeoJSON data
     const fileName = `temp_geojson_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
 
-    // Register the GeoJSON as a temporary file in DuckDB
     await this.db.registerFileText(fileName, JSON.stringify(geojson));
 
-    // Create feature collection table from the temporary file
     const featureCollectionQuery = LOAD_FEATURE_COLLECTION_QUERY(fileName, `${outputTableName}_feature_collection`, workspace);
     await this.conn.query(featureCollectionQuery);
 
-    // Create the final layer table
     const queryLayer = LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY(
       `${outputTableName}_feature_collection`,
       outputTableName,
-      coordinateFormat,
+      sourceCrs,
+      targetCrs,
       workspace,
       boundingBox,
     );

@@ -2,4 +2,4 @@
  * @module AutkSpatialDb
  * Spatial database public API.
  */
-export * from './SpatialDb';
+export * from './spatial-db';

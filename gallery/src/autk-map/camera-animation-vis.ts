@@ -19,7 +19,6 @@ class CameraAnimationVis {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395'
         });
 
         this.map = new AutkMap(canvas);
@@ -59,7 +58,6 @@ class OsmLayersApi {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads', 'buildings'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
@@ -105,7 +103,6 @@ class SpatialJoinNear {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
@@ -119,7 +116,6 @@ class SpatialJoinNear {
             geometryColumns: {
                 latColumnName: 'Latitude',
                 longColumnName: 'Longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 
@@ -191,7 +187,6 @@ class Heatmap {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
@@ -205,7 +200,6 @@ class Heatmap {
             geometryColumns: {
                 latColumnName: 'Latitude',
                 longColumnName: 'Longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 
@@ -279,7 +273,6 @@ class ComputeFunction {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395'
         });
 
         await this.db.loadCsv({
@@ -288,7 +281,6 @@ class ComputeFunction {
             geometryColumns: {
                 latColumnName: 'Latitude',
                 longColumnName: 'Longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 

@@ -49,7 +49,8 @@ export interface OsmLoadTimings {
 export type LoadOsmParams = {
   outputTableName: string;
   autoLoadLayers?: {
-    coordinateFormat: string;
+    /** CRS of the OSM input data (source). Defaults to EPSG:4326. */
+    coordinateFormat?: string;
     dropOsmTable: boolean;
     layers: Array<LayerType>;
   };

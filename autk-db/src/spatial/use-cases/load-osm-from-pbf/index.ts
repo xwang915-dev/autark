@@ -1,1 +1,1 @@
-export { LoadOsmFromPbfUseCase } from './LoadOsmFromPbfUseCase';
+export { LoadOsmFromPbfUseCase } from './load-osm-from-pbf-use-case';

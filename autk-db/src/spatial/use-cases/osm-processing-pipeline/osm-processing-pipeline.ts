@@ -7,7 +7,7 @@ import {
   PARKS_NATURAL_VALUES,
   WATER_NATURAL_VALUES,
   WATER_FEATURE_VALUES,
-  EXCLUDED_HIGHWAY_VALUES,
+  EXCLUDED_ROADS_VALUES,
   EXCLUDED_BUILDING_VALUES,
 } from '../../../shared/osm-tag-definitions';
 
@@ -318,7 +318,7 @@ export class OsmProcessingPipeline {
     return (
       tags.highway !== undefined &&
       tags.area !== 'yes' &&
-      !this.hasTagValue(tags, 'highway', EXCLUDED_HIGHWAY_VALUES)
+      !this.hasTagValue(tags, 'highway', EXCLUDED_ROADS_VALUES)
     );
   }
 

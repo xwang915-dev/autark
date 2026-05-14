@@ -15,7 +15,8 @@ interface LoadJsonOnTableWithCoordinatesParams {
   tableName: string;
   latColumnName: string;
   longColumnName: string;
-  coordinateFormat: string;
+  sourceCrs: string;
+  targetCrs: string;
   workspace: string;
 }
 export const LOAD_JSON_ON_TABLE_WITH_COORDINATES_QUERY = ({
@@ -23,7 +24,8 @@ export const LOAD_JSON_ON_TABLE_WITH_COORDINATES_QUERY = ({
   tableName,
   latColumnName,
   longColumnName,
-  coordinateFormat,
+  sourceCrs,
+  targetCrs,
   workspace,
 }: LoadJsonOnTableWithCoordinatesParams) => {
   const qualifiedTableName = `${workspace}.${tableName}`;
@@ -33,8 +35,8 @@ export const LOAD_JSON_ON_TABLE_WITH_COORDINATES_QUERY = ({
           *,
           ST_Transform(
               ST_Point(CAST(${longColumnName} AS DOUBLE), CAST(${latColumnName} AS DOUBLE)),
-              'EPSG:4326',
-              '${coordinateFormat}',
+              '${sourceCrs}',
+              '${targetCrs}',
               always_xy := true
           ) AS ${DEFAULT_GEO_COLUMN_NAME}
       FROM read_json_auto('${jsonFileUrl}');

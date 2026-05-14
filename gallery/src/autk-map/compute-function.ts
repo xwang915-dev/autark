@@ -18,7 +18,6 @@ export class ComputeFunction {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395'
         });
 
         await this.db.loadCsv({
@@ -27,7 +26,6 @@ export class ComputeFunction {
             geometryColumns: {
                 latColumnName: 'Latitude',
                 longColumnName: 'Longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 

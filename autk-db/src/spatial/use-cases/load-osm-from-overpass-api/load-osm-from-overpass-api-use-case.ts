@@ -3,7 +3,7 @@ import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { LoadOsmParams, OsmElement, OnLoadingProgress } from './interfaces';
 import { OsmTable } from '../../../shared/interfaces';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
-import { HttpCache } from '../../../shared/HttpCache';
+import { HttpCache } from '../../../shared/http-cache';
 import {
   PARKS_LEISURE_VALUES,
   PARKS_LANDUSE_VALUES,
@@ -11,10 +11,10 @@ import {
   WATER_NATURAL_VALUES,
   WATER_FEATURE_VALUES,
   EXCLUDED_BUILDING_VALUES,
-  EXCLUDED_HIGHWAY_VALUES,
+  EXCLUDED_ROADS_VALUES,
 } from '../../../shared/osm-tag-definitions';
 
-import { OsmProcessingPipeline } from '../osm-processing-pipeline/OsmProcessingPipeline';
+import { OsmProcessingPipeline } from '../osm-processing-pipeline/osm-processing-pipeline';
 
 interface OverpassApiResponse {
   elements: OsmElement[];
@@ -493,7 +493,7 @@ export class LoadOsmFromOverpassApiUseCase {
     for (const layer of layers) {
       switch (layer) {
         case 'roads':
-          wayFilters.add(`"highway"]["area"!="yes"]["highway"!~"^(${EXCLUDED_HIGHWAY_VALUES.join('|')})$"`);
+          wayFilters.add(`"highway"]["area"!="yes"]["highway"!~"^(${EXCLUDED_ROADS_VALUES.join('|')})$"`);
           break;
         case 'buildings':
           wayFilters.add(`"building"][${this.buildExcludedValueSelector('building', EXCLUDED_BUILDING_VALUES)}]`);

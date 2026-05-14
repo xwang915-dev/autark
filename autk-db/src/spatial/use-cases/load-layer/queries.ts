@@ -4,7 +4,8 @@ import { BoundingBox } from '../../../shared/interfaces';
 type Params = {
   tableName: string;
   layer: LayerType;
-  outputFormat: string;
+  sourceCrs: string;
+  targetCrs: string;
   outputTableName: string;
   boundingBox?: BoundingBox;
   workspace?: string;
@@ -12,12 +13,12 @@ type Params = {
 
 const AREA_LAYERS: LayerType[] = ['buildings', 'parks', 'water'];
 
-export const LOAD_LAYER_QUERY = ({ tableName, layer, outputFormat, outputTableName, boundingBox, workspace = 'main' }: Params) => {
+export const LOAD_LAYER_QUERY = ({ tableName, layer, sourceCrs, targetCrs, outputTableName, boundingBox, workspace = 'main' }: Params) => {
   const query = getLayerQuery(layer);
-  
+
   const qualifiedInputTableName = `${workspace}.${tableName}`;
   const qualifiedOutputTableName = `${workspace}.${outputTableName}`;
-  
+
   let actualTableName = qualifiedInputTableName;
   if (layer === 'surface') {
     const baseTableName = tableName.replace(new RegExp(`^${workspace}\\.`), '');
@@ -44,22 +45,22 @@ export const LOAD_LAYER_QUERY = ({ tableName, layer, outputFormat, outputTableNa
           ${layer}.id,
           ${layer}.tags properties,
           ${layer}.refs,
-          ${buildGeometrySelect({ outputFormat, boundingBox, layer })} geometry
+          ${buildGeometrySelect({ sourceCrs, targetCrs, boundingBox, layer })} geometry
       FROM ${layer}
       JOIN ${layer}_with_nodes_refs
       ON ${layer}.id = ${layer}_with_nodes_refs.id
       JOIN ${layer}_required_nodes_with_geometries nodes
       ON ${layer}_with_nodes_refs.ref = nodes.id
       GROUP BY 1, 2, 3
-      ${buildHavingClause({ outputFormat, boundingBox, layer })};
+      ${buildHavingClause({ sourceCrs, targetCrs, boundingBox, layer })};
 
     DESCRIBE ${qualifiedOutputTableName};
   `;
 };
 
-function buildAreaGeometryExpression(outputFormat: string, boundingBox?: BoundingBox) {
+function buildAreaGeometryExpression(sourceCrs: string, targetCrs: string, boundingBox?: BoundingBox) {
   const baseGeometry = `
-    CASE 
+    CASE
       WHEN refs[1] = refs[array_length(refs)] AND array_length(refs) > 3 THEN
         ST_Transform(
           ST_MakePolygon(
@@ -67,8 +68,8 @@ function buildAreaGeometryExpression(outputFormat: string, boundingBox?: Boundin
               list(nodes.geometry ORDER BY ref_idx ASC)
             )
           ),
-          'EPSG:4326',
-          '${outputFormat}',
+          '${sourceCrs}',
+          '${targetCrs}',
           always_xy := true
         )
       ELSE
@@ -76,8 +77,8 @@ function buildAreaGeometryExpression(outputFormat: string, boundingBox?: Boundin
           ST_MakeLine(
             list(nodes.geometry ORDER BY ref_idx ASC)
           ),
-          'EPSG:4326',
-          '${outputFormat}',
+          '${sourceCrs}',
+          '${targetCrs}',
           always_xy := true
         )
     END`;
@@ -89,38 +90,42 @@ function buildAreaGeometryExpression(outputFormat: string, boundingBox?: Boundin
 }
 
 function buildGeometrySelect({
-  outputFormat,
+  sourceCrs,
+  targetCrs,
   boundingBox,
   layer,
 }: {
-  outputFormat: string;
+  sourceCrs: string;
+  targetCrs: string;
   boundingBox?: BoundingBox;
   layer: LayerType;
 }) {
   return AREA_LAYERS.includes(layer)
-    ? buildAreaGeometryExpression(outputFormat, boundingBox)
+    ? buildAreaGeometryExpression(sourceCrs, targetCrs, boundingBox)
     : `ST_Transform(
         ST_MakeLine(
           list(nodes.geometry ORDER BY ref_idx ASC)
         ),
-        'EPSG:4326',
-        '${outputFormat}',
+        '${sourceCrs}',
+        '${targetCrs}',
         always_xy := true
       )`;
 }
 
 function buildHavingClause({
-  outputFormat,
+  sourceCrs,
+  targetCrs,
   boundingBox,
   layer,
 }: {
-  outputFormat: string;
+  sourceCrs: string;
+  targetCrs: string;
   boundingBox?: BoundingBox;
   layer: LayerType;
 }) {
   if (!boundingBox || !AREA_LAYERS.includes(layer)) return '';
 
-  const geometry = buildAreaGeometryExpression(outputFormat, boundingBox);
+  const geometry = buildAreaGeometryExpression(sourceCrs, targetCrs, boundingBox);
   const clippingGeometry = `ST_MakeEnvelope(${boundingBox.minLon}, ${boundingBox.minLat}, ${boundingBox.maxLon}, ${boundingBox.maxLat})`;
   return `HAVING ST_Intersects(${geometry}, ${clippingGeometry})`;
 }

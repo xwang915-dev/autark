@@ -194,7 +194,6 @@ export class Shadows {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads', 'buildings'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
@@ -209,7 +208,6 @@ export class Shadows {
             geometryColumns: {
                 latColumnName: 'latitude',
                 longColumnName: 'longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 

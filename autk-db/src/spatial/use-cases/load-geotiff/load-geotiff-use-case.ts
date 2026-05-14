@@ -3,7 +3,7 @@ import { fromArrayBuffer } from 'geotiff';
 
 import { GeoTiffTable } from '../../../shared/interfaces';
 import { LoadGeoTiffParams } from './interfaces';
-import { DEFALT_COORDINATE_FORMAT } from '../../../shared/consts';
+import { DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../../shared/consts';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
 
 const DEFAULT_MAX_PIXELS = 500_000;
@@ -20,14 +20,14 @@ export class LoadGeoTiffUseCase {
     this.conn = conn;
   }
 
-  async exec(params: LoadGeoTiffParams): Promise<GeoTiffTable> {
+  async exec(params: LoadGeoTiffParams & { workspaceCoordinateFormat?: string }): Promise<GeoTiffTable> {
     const {
       geotiffFileUrl,
       geotiffArrayBuffer,
       outputTableName,
-      coordinateFormat = DEFALT_COORDINATE_FORMAT,
-      sourceCrs,
+      coordinateFormat,
       workspace = 'main',
+      workspaceCoordinateFormat = DEFAULT_WORKSPACE_COORDINATE_FORMAT,
       boundingBox,
       maxPixels = DEFAULT_MAX_PIXELS,
     } = params;
@@ -39,6 +39,8 @@ export class LoadGeoTiffUseCase {
       throw new Error('Cannot provide both geotiffFileUrl and geotiffArrayBuffer.');
     }
 
+    const sourceCrs = coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT;
+    const targetCrs = workspaceCoordinateFormat;
     const qualifiedTableName = `${workspace}.${outputTableName}`;
     const csvFile = `_geotiff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.csv`;
 
@@ -58,18 +60,17 @@ export class LoadGeoTiffUseCase {
     const tiff = await fromArrayBuffer(buffer);
     const image = await tiff.getImage(0);
 
-    const origin = image.getOrigin();        // [originX, originY] — top-left corner in source CRS
-    const resolution = image.getResolution(); // [resX, resY] — resY is negative
+    const origin = image.getOrigin();
+    const resolution = image.getResolution();
     const originX = origin[0];
     const originY = origin[1];
     const resX = resolution[0];
-    const resY = resolution[1]; // negative
+    const resY = resolution[1];
     const fullWidth = Number(image.getWidth());
     const fullHeight = Number(image.getHeight());
     const bandCount = Number(image.getSamplesPerPixel());
 
     // 3. Compute pixel window from optional bounding box
-    // Detect 0-360 longitude convention: originX >= 0 and raster spans > 180 degrees
     const rasterMaxX = originX + fullWidth * resX;
     const is0To360 = originX >= 0 && rasterMaxX > 180;
 
@@ -78,7 +79,6 @@ export class LoadGeoTiffUseCase {
       let minLon = boundingBox.minLon;
       let maxLon = boundingBox.maxLon;
 
-      // Convert -180/180 bounding box to 0-360 if the raster uses that convention
       if (is0To360) {
         if (minLon < 0) minLon += 360;
         if (maxLon < 0) maxLon += 360;
@@ -86,7 +86,6 @@ export class LoadGeoTiffUseCase {
 
       const xMin = Math.max(0, Math.floor((minLon - originX) / resX));
       const xMax = Math.min(fullWidth, Math.ceil((maxLon - originX) / resX));
-      // resY is negative so the lat comparison is inverted
       const yMin = Math.max(0, Math.floor((boundingBox.maxLat - originY) / resY));
       const yMax = Math.min(fullHeight, Math.ceil((boundingBox.minLat - originY) / resY));
       if (xMin >= xMax || yMin >= yMax) {
@@ -142,10 +141,10 @@ export class LoadGeoTiffUseCase {
     await this.db.registerFileText(csvFile, lines.join('\n'));
 
     try {
-      // 7. Build geometry expression with optional CRS reprojection
-      const shouldTransform = sourceCrs && sourceCrs !== coordinateFormat;
+      // 7. Build geometry expression with CRS reprojection
+      const shouldTransform = sourceCrs !== targetCrs;
       const geomExpr = shouldTransform
-        ? `ST_Transform(ST_Point(lon, lat), '${sourceCrs}', '${coordinateFormat}', always_xy := true)`
+        ? `ST_Transform(ST_Point(lon, lat), '${sourceCrs}', '${targetCrs}', always_xy := true)`
         : `ST_Point(lon, lat)`;
 
       const propertiesExpr =

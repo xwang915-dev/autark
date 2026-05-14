@@ -20,7 +20,6 @@ export class Heatmap {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
@@ -34,7 +33,6 @@ export class Heatmap {
             geometryColumns: {
                 latColumnName: 'Latitude',
                 longColumnName: 'Longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 

@@ -17,7 +17,6 @@ export class OsmLayersApi {
                 areas: ['Niterói'],
             }, outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: [
                     'surface',
                     'parks',
@@ -31,7 +30,6 @@ export class OsmLayersApi {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/nit_buildings.geojson`,
             outputTableName: 'lotes',
-            coordinateFormat: 'EPSG:3395',
             layerType: 'buildings'
         });
 

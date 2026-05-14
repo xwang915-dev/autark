@@ -2,8 +2,8 @@
 import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { BuildHeatmapParams } from './interfaces';
 import { BoundingBox, Table } from '../../../shared/interfaces';
-import { LoadGridLayerUseCase } from '../load-grid-layer/LoadGridLayerUseCase';
-import { SpatialJoinUseCase } from '../spatial-join/SpatialJoinUseCase';
+import { LoadGridLayerUseCase } from '../load-grid-layer/load-grid-layer-use-case';
+import { SpatialJoinUseCase } from '../spatial-join/spatial-join-use-case';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
 
 /**

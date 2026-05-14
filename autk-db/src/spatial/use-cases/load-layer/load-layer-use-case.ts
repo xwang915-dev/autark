@@ -5,9 +5,9 @@ import { LoadLayerParams, LayerType } from './interfaces';
 import { LOAD_LAYER_QUERY } from './queries';
 import { BoundingBox, LayerTable } from '../../../shared/interfaces';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
-import { DEFALT_COORDINATE_FORMAT } from '../../../shared/consts';
-import { AssignBuildingIdsUseCase } from '../assign-building-ids/AssignBuildingIdsUseCase';
-import { AggregateBuildingLayerUseCase } from '../aggregate-building-layer/AggregateBuildingLayerUseCase';
+import { DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../../shared/consts';
+import { AssignBuildingIdsUseCase } from '../assign-building-ids/assign-building-ids-use-case';
+import { AggregateBuildingLayerUseCase } from '../aggregate-building-layer/aggregate-building-layer-use-case';
 import { getOsmProcessingConfig } from './osm-processing-config';
 
 type RelationRow = {
@@ -56,8 +56,9 @@ export class LoadLayerUseCase {
     this.aggregateBuildingLayerUseCase = new AggregateBuildingLayerUseCase(conn);
   }
 
-  async exec(params: LoadLayerParams): Promise<LayerTable> {
-    if (!params.coordinateFormat) params.coordinateFormat = DEFALT_COORDINATE_FORMAT;
+  async exec(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<LayerTable> {
+    const sourceCrs = params.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT;
+    const targetCrs = params.workspaceCoordinateFormat || DEFAULT_WORKSPACE_COORDINATE_FORMAT;
     const workspace = params.workspace || 'main';
 
     const layerOutputTableName = params.outputTableName || `${params.osmInputTableName}_${params.layer}`;
@@ -66,7 +67,8 @@ export class LoadLayerUseCase {
     const layerQuery = LOAD_LAYER_QUERY({
       layer: params.layer,
       tableName: params.osmInputTableName,
-      outputFormat: params.coordinateFormat,
+      sourceCrs,
+      targetCrs,
       outputTableName: layerOutputTableName,
       boundingBox: params.boundingBox,
       workspace,
@@ -83,7 +85,8 @@ export class LoadLayerUseCase {
         inputTableName: params.osmInputTableName,
         outputTableName: layerOutputTableName,
         layer: params.layer,
-        coordinateFormat: params.coordinateFormat,
+        sourceCrs,
+        targetCrs,
         boundingBox: params.boundingBox,
         workspace,
       });
@@ -120,7 +123,8 @@ export class LoadLayerUseCase {
     inputTableName: string;
     outputTableName: string;
     layer: LayerType;
-    coordinateFormat: string;
+    sourceCrs: string;
+    targetCrs: string;
     boundingBox?: BoundingBox;
     workspace: string;
   }): Promise<number> {
@@ -132,7 +136,7 @@ export class LoadLayerUseCase {
 
     const qualifiedOutputTableName = `${params.workspace}.${params.outputTableName}`;
     const geometryWgs84 = 'ST_GeomFromGeoJSON(JSON(geometry))';
-    const transformedGeometry = `ST_Transform(${geometryWgs84}, 'EPSG:4326', '${params.coordinateFormat}', always_xy := true)`;
+    const transformedGeometry = `ST_Transform(${geometryWgs84}, '${params.sourceCrs}', '${params.targetCrs}', always_xy := true)`;
     const clippingGeometry = params.boundingBox
       ? `ST_MakeEnvelope(${params.boundingBox.minLon}, ${params.boundingBox.minLat}, ${params.boundingBox.maxLon}, ${params.boundingBox.maxLat})`
       : null;

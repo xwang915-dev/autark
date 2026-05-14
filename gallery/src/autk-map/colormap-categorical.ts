@@ -20,7 +20,6 @@ export class ColormapCat {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_roads.geojson`,
             outputTableName: 'roads',
-            coordinateFormat: 'EPSG:3395'
         });
 
         this.map = new AutkMap(canvas);

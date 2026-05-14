@@ -22,7 +22,6 @@ export class ComputeOsm {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<'surface' | 'parks' | 'water' | 'roads'>,
                 dropOsmTable: true,
             },

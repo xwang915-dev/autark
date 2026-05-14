@@ -6,12 +6,16 @@
  */
 export type { LayerType, BoundingBox } from 'autk-core';
 export {
+  DEFAULT_INPUT_COORDINATE_FORMAT,
+  DEFAULT_WORKSPACE_COORDINATE_FORMAT,
+} from './shared/consts';
+export {
   PARKS_LEISURE_VALUES,
   PARKS_LANDUSE_VALUES,
   PARKS_NATURAL_VALUES,
   WATER_NATURAL_VALUES,
   WATER_FEATURE_VALUES,
-  EXCLUDED_HIGHWAY_VALUES as EXCLUDED_ROAD_HIGHWAY_VALUES,
+  EXCLUDED_ROADS_VALUES,
   EXCLUDED_BUILDING_VALUES,
 } from './shared/osm-tag-definitions';
 export type { Layer, LoadLayerParams } from './spatial/use-cases/load-layer/interfaces';
@@ -23,7 +27,7 @@ export type { SpatialQueryParams, AggregateFunction } from './spatial/use-cases/
 export type { BuildHeatmapParams, HeatmapAggregateFunction } from './spatial/use-cases/build-heatmap/interfaces';
 export type { LoadCsvParams } from './spatial/use-cases/load-csv/interfaces';
 export type { LoadCustomLayerParams } from './spatial/use-cases/load-custom-layer/interfaces';
-export type { LoadGridLayerParams } from './spatial/use-cases/load-grid-layer/LoadGridLayerUseCase';
+export type { LoadGridLayerParams } from './spatial/use-cases/load-grid-layer/load-grid-layer-use-case';
 export type { LoadJsonParams } from './spatial/use-cases/load-json/interfaces';
 export type { RawQueryParams, RawQueryOutput } from './spatial/use-cases/raw-query/interfaces';
 export type { UpdateTableParams, UpdateStrategy } from './spatial/use-cases/update-table/interfaces';

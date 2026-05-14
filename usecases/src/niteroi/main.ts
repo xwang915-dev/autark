@@ -38,7 +38,6 @@ export class OsmLayersApi {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<'surface' | 'parks' | 'water' | 'roads'>,
                 dropOsmTable: true,
             },
@@ -50,8 +49,6 @@ export class OsmLayersApi {
         await this.db.loadGeoTiff({
             geotiffFileUrl: `${URL}data/niteroi_lst_verao_2001_2024.tif`,
             outputTableName: 'lst',
-            sourceCrs: 'EPSG:4326',
-            coordinateFormat: 'EPSG:3395',
             boundingBox,
         });
 

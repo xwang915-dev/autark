@@ -8,21 +8,21 @@ export const LOAD_FEATURE_COLLECTION_QUERY = (geojsonFileUrl: string, featureCol
   `;
 };
 
-// TODO: update this name columns, its not linestring (i just do not want to break pattern right now)
 export const LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY = (
   featureCollectionTableName: string,
   outputTableName: string,
-  coordinateFormat: string,
+  sourceCrs: string,
+  targetCrs: string,
   workspace: string,
   boundingBox?: BoundingBox,
 ) => {
   const qualifiedFeatureCollectionTableName = `${workspace}.${featureCollectionTableName}`;
   const qualifiedOutputTableName = `${workspace}.${outputTableName}`;
-  
+
   const geometryTransform = `ST_Transform(
     ST_GeomFromGeoJSON(JSON(feature.geometry)),
-    'EPSG:4326',
-    '${coordinateFormat}',
+    '${sourceCrs}',
+    '${targetCrs}',
     always_xy := true
   )`;
 

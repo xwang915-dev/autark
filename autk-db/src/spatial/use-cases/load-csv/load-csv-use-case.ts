@@ -4,7 +4,7 @@ import { LoadCsvParams } from './interfaces';
 import { CsvTable } from '../../../shared/interfaces';
 import { LOAD_CSV_ON_TABLE_QUERY, LOAD_CSV_ON_TABLE_WITH_COORDINATES_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
-import { DEFALT_COORDINATE_FORMAT, DEFAULT_GEO_COLUMN_NAME } from '../../../shared/consts';
+import { DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT, DEFAULT_GEO_COLUMN_NAME } from '../../../shared/consts';
 
 /**
  * Loads CSV data into DuckDB, with optional geometry column creation.
@@ -18,7 +18,7 @@ export class LoadCsvUseCase {
     this.conn = conn;
   }
 
-  async exec({ csvFileUrl, csvObject, outputTableName, geometryColumns, delimiter = ',', workspace = 'main' }: LoadCsvParams): Promise<CsvTable> {
+  async exec({ csvFileUrl, csvObject, outputTableName, geometryColumns, delimiter = ',', workspace = 'main', workspaceCoordinateFormat = DEFAULT_WORKSPACE_COORDINATE_FORMAT }: LoadCsvParams & { workspaceCoordinateFormat?: string }): Promise<CsvTable> {
     if (!csvFileUrl && !csvObject) {
       throw new Error('Either csvFileUrl or csvObject must be provided');
     }
@@ -37,7 +37,7 @@ export class LoadCsvUseCase {
     await this.db.registerFileText(csvPath, csvString);
 
     const qualifiedTableName = `${workspace}.${outputTableName}`;
-    
+
     let loadCsvQuery: string;
     if (geometryColumns) {
       loadCsvQuery = LOAD_CSV_ON_TABLE_WITH_COORDINATES_QUERY({
@@ -46,7 +46,8 @@ export class LoadCsvUseCase {
         delimiter,
         latColumnName: geometryColumns.latColumnName,
         longColumnName: geometryColumns.longColumnName,
-        coordinateFormat: geometryColumns.coordinateFormat || DEFALT_COORDINATE_FORMAT,
+        sourceCrs: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+        targetCrs: workspaceCoordinateFormat,
         workspace,
       });
     } else {

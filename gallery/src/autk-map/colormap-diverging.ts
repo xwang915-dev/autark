@@ -14,7 +14,6 @@ export class ColormapDiv {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395'
         });
 
         this.map = new AutkMap(canvas);

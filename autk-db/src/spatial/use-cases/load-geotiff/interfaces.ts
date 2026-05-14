@@ -8,16 +8,10 @@ export interface LoadGeoTiffParams {
   /** Name of the output DuckDB table. */
   outputTableName: string;
   /**
-   * Target coordinate format for the geometry column (e.g. 'EPSG:3395').
-   * Defaults to EPSG:4326 (no transformation).
+   * CRS of the input GeoTIFF file (source). Defaults to EPSG:4326.
+   * The geometry will be transformed from this CRS to the workspace CRS.
    */
   coordinateFormat?: string;
-  /**
-   * CRS of the input GeoTIFF (e.g. 'EPSG:4326', 'EPSG:32633').
-   * Required when coordinateFormat differs from the file's native CRS.
-   * If omitted, no coordinate transformation is applied.
-   */
-  sourceCrs?: string;
   /**
    * Clip the raster to this bounding box (in the source CRS) before loading.
    * Strongly recommended for large tiles — without it the full raster is decoded,

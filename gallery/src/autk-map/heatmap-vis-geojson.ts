@@ -16,7 +16,6 @@ export class Heatmap {
        await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395'
         });
 
         await this.db.loadCsv({
@@ -25,7 +24,6 @@ export class Heatmap {
             geometryColumns: {
                 latColumnName: 'Latitude',
                 longColumnName: 'Longitude',
-                coordinateFormat: 'EPSG:3395',
             },
         });
 

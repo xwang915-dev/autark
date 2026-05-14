@@ -16,7 +16,6 @@ export class OsmLayersApi {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'water'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,

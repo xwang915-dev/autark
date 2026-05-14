@@ -17,7 +17,6 @@ export class GeojsonPolygonsVis {
         await this.db.loadCustomLayer({
             geojsonObject: data,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395'
         });
 
         this.map = new AutkMap(canvas);

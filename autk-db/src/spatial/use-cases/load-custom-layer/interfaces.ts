@@ -6,6 +6,7 @@ export interface LoadCustomLayerParams {
   geojsonFileUrl?: string;
   geojsonObject?: FeatureCollection;
   outputTableName: string;
+  /** CRS of the input GeoJSON data (source). Defaults to EPSG:4326. */
   coordinateFormat?: string;
   boundingBox?: BoundingBox;
   workspace?: string;

@@ -25,7 +25,6 @@ export class OsmLayersApi {
                 ],
             },
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: [
                     'surface',
                     'parks',

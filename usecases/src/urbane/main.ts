@@ -81,7 +81,6 @@ export class Urbane {
             queryArea: { geocodeArea: 'New York', areas: ['Manhattan Island'] },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                coordinateFormat: 'EPSG:3395',
                 layers: ['surface', 'parks', 'water', 'roads', 'buildings'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
@@ -93,7 +92,6 @@ export class Urbane {
         await this.db.loadCustomLayer({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
-            coordinateFormat: 'EPSG:3395',
         });
         await this.db.spatialQuery({
             tableRootName: 'table_osm_buildings',
@@ -111,7 +109,6 @@ export class Urbane {
                 geometryColumns: {
                     latColumnName: 'latitude',
                     longColumnName: 'longitude',
-                    coordinateFormat: 'EPSG:3395',
                 },
             });
 
