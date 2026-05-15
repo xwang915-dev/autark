@@ -148,6 +148,9 @@ export type {
     TypedArrayConstructor,
 } from './types-buffer';
 
+/** Computes connected components of intersecting GeoJSON geometries. */
+export { computeIntersectingClusterIds } from './cluster-features';
+
 /** General-purpose GeoJSON, layer, and path utilities. */
 // ─── Utilities ───────────────────────────────────────────────────────────────
 

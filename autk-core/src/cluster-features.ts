@@ -35,7 +35,7 @@ export function computeIntersectingClusterIds(
     minY: number;
     maxX: number;
     maxY: number;
-    idx: number; // index within validItems
+    idx: number;
   }
   const rtree = new RBush<RTreeItem>();
   const itemsForTree: RTreeItem[] = new Array(n);

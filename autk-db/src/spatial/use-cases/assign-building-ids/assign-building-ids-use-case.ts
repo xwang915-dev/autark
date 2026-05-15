@@ -1,6 +1,6 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { Column } from '../../../shared/interfaces';
-import { computeIntersectingClusterIds } from '../../../shared/cluster-features';
+import { computeIntersectingClusterIds } from 'autk-core';
 
 /**
  * Assigns stable `building_id` values by clustering intersecting building geometries.
