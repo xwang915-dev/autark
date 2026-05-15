@@ -5,13 +5,12 @@ import { loadDb } from './duckdb';
 
 import {
     BoundingBox,
-    CollectionLayerTable,
     CsvTable,
     GeotiffTable,
     GeojsonTable,
-    isCollectionLayerTable,
     isGeotiffTable,
     isOsmTable,
+    isRenderableTable,
     JsonTable,
     OsmLayerTable,
     Table,
@@ -639,7 +638,7 @@ export class AutkDb {
 
         const layerTable = this.tables.find((t) => t.name === layerTableName);
         if (!layerTable) throw new Error(`Table ${layerTableName} not found.`);
-        if (!isCollectionLayerTable(layerTable)) throw new Error(`Table ${layerTableName} is not a layer table.`);
+        if (!isRenderableTable(layerTable)) throw new Error(`Table ${layerTableName} is not a renderable layer.`);
 
         const featureCollection = await this.getLayerGeojsonUseCase.exec(layerTable, this.currentWorkspace);
 
@@ -725,9 +724,9 @@ export class AutkDb {
      * const layers = db.getLayerTables();
      * for (const l of layers) await map.loadCollection(l.name, { collection: await db.getLayer(l.name), type: l.type });
      */
-    getLayerTables(): Array<CollectionLayerTable> {
-        return this.tables.filter((table): table is CollectionLayerTable => {
-            return isCollectionLayerTable(table);
+    getLayerTables(): Array<Table & { type: import('autk-core').LayerType }> {
+        return this.tables.filter((table): table is Table & { type: import('autk-core').LayerType } => {
+            return isRenderableTable(table);
         });
     }
 

@@ -1,10 +1,10 @@
-import { CollectionLayerTable } from '../../interfaces';
+import { Table } from '../../interfaces';
 
-export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: CollectionLayerTable, workspace: string) => {
+export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: import('autk-core').LayerType }, workspace: string) => {
   const hasBuildingIdColumn = !!layerTable.columns?.some((c) => c.name === 'building_id');
   const qualifiedTableName = `${workspace}.${layerTable.name}`;
 
-  if (layerTable.source === 'user' && layerTable.type === 'raster') {
+  if (layerTable.type === 'raster') {
     return `
       SELECT json_object(
            'type', 'FeatureCollection',

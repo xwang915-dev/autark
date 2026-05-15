@@ -66,17 +66,22 @@ export interface UserTable extends BaseTable {
   type?: LayerType;
 }
 
-export type DataTable = OsmTable | CsvTable | JsonTable | (UserTable & { type?: undefined });
-export type LayerTable = OsmLayerTable | GeojsonTable | GeotiffTable | (UserTable & { type: LayerType });
-export type CollectionLayerTable = OsmLayerTable | GeojsonTable | (UserTable & { type: LayerType });
 export type Table = OsmTable | OsmLayerTable | CsvTable | JsonTable | GeojsonTable | GeotiffTable | UserTable;
 
-export function isLayerTable(table: Table): table is LayerTable {
+export function isRenderableTable(table: Table): table is Table & { type: LayerType } {
   return table.type !== undefined;
 }
 
-export function isCollectionLayerTable(table: Table): table is CollectionLayerTable {
-  return table.type !== undefined && table.source !== 'geotiff';
+export function isVectorTable(
+  table: Table,
+): table is OsmLayerTable | GeojsonTable | (UserTable & { type: Exclude<LayerType, 'raster'> }) {
+  return table.type !== undefined && table.type !== 'raster';
+}
+
+export function isRasterTable(
+  table: Table,
+): table is GeotiffTable | (UserTable & { type: 'raster' }) {
+  return table.type === 'raster';
 }
 
 export function isOsmTable(table: Table): table is OsmTable {
@@ -85,8 +90,4 @@ export function isOsmTable(table: Table): table is OsmTable {
 
 export function isGeotiffTable(table: Table): table is GeotiffTable {
   return table.source === 'geotiff';
-}
-
-export function isVectorLayerTable(table: Table): table is Exclude<LayerTable, GeotiffTable | (UserTable & { type: 'raster' })> {
-  return table.type !== undefined && table.type !== 'raster';
 }

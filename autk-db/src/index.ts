@@ -24,9 +24,6 @@ export type {
   Table,
   BaseTable,
   RasterBandMetadata,
-  DataTable,
-  LayerTable,
-  CollectionLayerTable,
   UserTable,
   OsmTable,
   OsmLayerTable,
@@ -38,11 +35,11 @@ export type {
 } from './interfaces';
 
 export {
-  isLayerTable,
-  isCollectionLayerTable,
+  isRenderableTable,
+  isVectorTable,
+  isRasterTable,
   isOsmTable,
   isGeotiffTable,
-  isVectorLayerTable,
 } from './interfaces';
 
 export type { Layer, LoadLayerParams } from './use-cases/load-layer';
