@@ -17,7 +17,7 @@ export {
   WATER_FEATURE_VALUES,
   EXCLUDED_ROADS_VALUES,
   EXCLUDED_BUILDING_VALUES,
-} from './shared/osm-tag-definitions';
+} from './shared/osm-tags';
 export type { Layer, LoadLayerParams } from './spatial/use-cases/load-layer/interfaces';
 export type { LoadGeoTiffParams } from './spatial/use-cases/load-geotiff';
 export type { Table, OsmTable, OsmLayerTable, GeojsonTable, CsvTable, JsonTable, SqlTable, GridTable, GeotiffTable, Column } from './shared/interfaces';
