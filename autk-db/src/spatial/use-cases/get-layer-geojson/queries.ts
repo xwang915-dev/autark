@@ -1,6 +1,6 @@
-import { CustomLayerTable, LayerTable } from '../../../shared/interfaces';
+import { GeojsonTable, OsmLayerTable } from '../../../shared/interfaces';
 
-export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: LayerTable | CustomLayerTable, workspace: string) => {
+export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: OsmLayerTable | GeojsonTable, workspace: string) => {
   const hasBuildingIdColumn = !!layerTable.columns?.some((c) => c.name === 'building_id');
   const qualifiedTableName = `${workspace}.${layerTable.name}`;
 

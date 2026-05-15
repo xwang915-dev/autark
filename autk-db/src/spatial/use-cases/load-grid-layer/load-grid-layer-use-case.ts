@@ -1,6 +1,6 @@
 import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import { BoundingBox, GridLayerTable } from '../../../shared/interfaces';
+import { BoundingBox, GridTable } from '../../../shared/interfaces';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
 
 export interface LoadGridLayerParams {
@@ -21,7 +21,7 @@ export class LoadGridLayerUseCase {
     this.conn = conn;
   }
 
-  async exec(params: LoadGridLayerParams): Promise<GridLayerTable> {
+  async exec(params: LoadGridLayerParams): Promise<GridTable> {
     const { boundingBox, rows, columns, outputTableName, workspace = 'main' } = params;
     const qualifiedTableName = `${workspace}.${outputTableName}`;
 

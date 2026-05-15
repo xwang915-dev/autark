@@ -3,7 +3,7 @@ import { FeatureCollection, LineString, Polygon } from 'geojson';
 import { polygonize } from '@turf/turf';
 
 import { PolygonizeSurfaceLayerParams } from './interfaces';
-import { LayerTable } from '../../../shared/interfaces';
+import { OsmLayerTable } from '../../../shared/interfaces';
 import { GetLayerGeojsonUseCase } from '../get-layer-geojson';
 import { LOAD_FEATURE_COLLECTION_QUERY } from '../load-custom-layer/queries';
 import { LOAD_POLYGONIZED_LAYER_QUERY } from './queries';
@@ -23,7 +23,7 @@ export class PolygonizeSurfaceLayerUseCase {
         this.getLayerGeojsonUseCase = new GetLayerGeojsonUseCase(conn);
     }
 
-    async exec(params: PolygonizeSurfaceLayerParams, surfaceTable: LayerTable): Promise<LayerTable> {
+    async exec(params: PolygonizeSurfaceLayerParams, surfaceTable: OsmLayerTable): Promise<OsmLayerTable> {
         const { surfaceTableName, workspace = 'main' } = params;
         const qualifiedSurfaceTableName = `${workspace}.${surfaceTableName}`;
         const qualifiedFeatureCollectionTableName = `${workspace}.${surfaceTableName}_feature_collection`;

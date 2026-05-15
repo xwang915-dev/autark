@@ -3,7 +3,7 @@ import type { Geometry, MultiPolygon, Polygon, Position } from 'geojson';
 
 import { LoadLayerParams, LayerType } from './interfaces';
 import { LOAD_LAYER_QUERY } from './queries';
-import { BoundingBox, LayerTable } from '../../../shared/interfaces';
+import { BoundingBox, OsmLayerTable } from '../../../shared/interfaces';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
 import { DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../../shared/consts';
 import { AssignBuildingIdsUseCase } from '../assign-building-ids/assign-building-ids-use-case';
@@ -56,7 +56,7 @@ export class LoadLayerUseCase {
     this.aggregateBuildingLayerUseCase = new AggregateBuildingLayerUseCase(conn);
   }
 
-  async exec(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<LayerTable> {
+  async exec(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
     const sourceCrs = params.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT;
     const targetCrs = params.workspaceCoordinateFormat || DEFAULT_WORKSPACE_COORDINATE_FORMAT;
     const workspace = params.workspace || 'main';

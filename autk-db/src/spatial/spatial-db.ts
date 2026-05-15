@@ -8,11 +8,11 @@ import { loadDb } from '../config/duckdb';
 import {
     BoundingBox,
     CsvTable,
-    CustomLayerTable,
-    GeoTiffTable,
-    GridLayerTable,
+    GeotiffTable,
+    GeojsonTable,
+    GridTable,
     JsonTable,
-    LayerTable,
+    OsmLayerTable,
     Table,
 } from '../shared/interfaces';
 
@@ -422,7 +422,7 @@ export class AutkSpatialDb {
      *   layer: 'buildings',
      * });
      */
-    async loadLayer(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<LayerTable> {
+    async loadLayer(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
         if (!this.db || !this.conn || !this.loadLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
@@ -457,7 +457,7 @@ export class AutkSpatialDb {
      *   layerType: 'parks',
      * });
      */
-    async loadCustomLayer(params: LoadCustomLayerParams): Promise<CustomLayerTable> {
+    async loadCustomLayer(params: LoadCustomLayerParams): Promise<GeojsonTable> {
         if (
             !this.db ||
             !this.conn ||
@@ -507,7 +507,7 @@ export class AutkSpatialDb {
      *   columns: 100,
      * });
      */
-    async loadGridLayer(params: LoadGridLayerParams): Promise<GridLayerTable> {
+    async loadGridLayer(params: LoadGridLayerParams): Promise<GridTable> {
         if (!this.db || !this.conn || !this.loadGridLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
@@ -534,7 +534,7 @@ export class AutkSpatialDb {
      *   outputTableName: 'temperature',
      * });
      */
-    async loadGeoTiff(params: LoadGeoTiffParams): Promise<GeoTiffTable> {
+    async loadGeoTiff(params: LoadGeoTiffParams): Promise<GeotiffTable> {
         if (!this.db || !this.conn || !this.loadGeoTiffUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
@@ -640,7 +640,7 @@ export class AutkSpatialDb {
         if (!layerTable) throw new Error(`Table ${layerTableName} not found.`);
         if (!isLayerType(layerTable.type)) throw new Error(`Table ${layerTableName} is not a Layer table.`);
 
-        const featureCollection = await this.getLayerGeojsonUseCase.exec(layerTable as LayerTable | CustomLayerTable, this.currentWorkspace);
+        const featureCollection = await this.getLayerGeojsonUseCase.exec(layerTable as OsmLayerTable | GeojsonTable, this.currentWorkspace);
 
         const workspaceData = this.getCurrentWorkspaceData();
         const osmBoundingBox = this.getOsmBoundingBox();
@@ -724,8 +724,8 @@ export class AutkSpatialDb {
      * const layers = db.getLayerTables();
      * for (const l of layers) await map.loadCollection(l.name, { collection: await db.getLayer(l.name), type: l.type });
      */
-    getLayerTables(): Array<LayerTable | CustomLayerTable> {
-        return this.tables.filter((table): table is LayerTable | CustomLayerTable => {
+    getLayerTables(): Array<OsmLayerTable | GeojsonTable> {
+        return this.tables.filter((table): table is OsmLayerTable | GeojsonTable => {
             return (
                 (table.source === 'osm' && isLayerType(table.type)) ||
                 (table.source === 'geojson' && isLayerType(table.type)) ||

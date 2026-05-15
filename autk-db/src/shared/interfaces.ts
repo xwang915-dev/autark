@@ -11,19 +11,60 @@ export {
   EXCLUDED_BUILDING_VALUES,
 } from './osm-tag-definitions';
 
-export type GridLayerTable = CommonTable & { source: 'user'; type: LayerType };
-export type GeoTiffTable   = CommonTable & { source: 'geotiff'; type: 'raster' };
+export type Table = OsmTable | OsmLayerTable | CsvTable | JsonTable | GeojsonTable | GridTable | GeotiffTable | SqlTable;
 
-export type Table = OsmTable | LayerTable | CsvTable | JsonTable | CustomLayerTable | GridLayerTable | GeoTiffTable | AnyTable;
+export interface OsmTable {
+  source: 'osm';
+  type: 'pointset';
+  name: string;
+  columns: Column[];
+}
 
-export type OsmTable = CommonTable & { source: 'osm'; type: 'pointset' }; // TODO: which type?
-export type LayerTable = CommonTable & { source: 'osm'; type: LayerType };
-export type CustomLayerTable = CommonTable & { source: 'geojson'; type: LayerType };
-export type CsvTable = CommonTable & { source: 'csv'; type: 'pointset' }; // TODO: in theory, its optional to be a pointset
-export type JsonTable = CommonTable & { source: 'json'; type: 'pointset' };
-export type AnyTable = CommonTable & { source: 'user'; type: 'pointset' };
+export interface OsmLayerTable {
+  source: 'osm';
+  type: LayerType;
+  name: string;
+  columns: Column[];
+}
 
-export interface CommonTable {
+export interface GeojsonTable {
+  source: 'geojson';
+  type: LayerType;
+  name: string;
+  columns: Column[];
+}
+
+export interface CsvTable {
+  source: 'csv';
+  type: 'pointset';
+  name: string;
+  columns: Column[];
+}
+
+export interface JsonTable {
+  source: 'json';
+  type: 'pointset';
+  name: string;
+  columns: Column[];
+}
+
+export interface GridTable {
+  source: 'user';
+  type: LayerType;
+  name: string;
+  columns: Column[];
+}
+
+export interface GeotiffTable {
+  source: 'geotiff';
+  type: 'raster';
+  name: string;
+  columns: Column[];
+}
+
+export interface SqlTable {
+  source: 'user';
+  type: 'pointset';
   name: string;
   columns: Column[];
 }

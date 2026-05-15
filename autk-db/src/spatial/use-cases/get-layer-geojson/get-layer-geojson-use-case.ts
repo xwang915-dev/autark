@@ -2,7 +2,7 @@ import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { FeatureCollection } from 'geojson';
 
 import { GET_LAYER_AS_GEOJSON_QUERY } from './queries';
-import { CustomLayerTable, LayerTable } from '../../../shared/interfaces';
+import { GeojsonTable, OsmLayerTable } from '../../../shared/interfaces';
 
 /**
  * Exports a layer table as a GeoJSON FeatureCollection.
@@ -14,7 +14,7 @@ export class GetLayerGeojsonUseCase {
     this.conn = conn;
   }
 
-  async exec(table: LayerTable | CustomLayerTable, workspace: string = 'main'): Promise<FeatureCollection> {
+  async exec(table: OsmLayerTable | GeojsonTable, workspace: string = 'main'): Promise<FeatureCollection> {
     const query = GET_LAYER_AS_GEOJSON_QUERY(table, workspace);
     const response = await this.conn.query(query);
 

@@ -1,7 +1,7 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { fromArrayBuffer } from 'geotiff';
 
-import { GeoTiffTable } from '../../../shared/interfaces';
+import { GeotiffTable } from '../../../shared/interfaces';
 import { LoadGeoTiffParams } from './interfaces';
 import { DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../../shared/consts';
 import { getColumnsFromDuckDbTableDescribe } from '../../shared/utils';
@@ -20,7 +20,7 @@ export class LoadGeoTiffUseCase {
     this.conn = conn;
   }
 
-  async exec(params: LoadGeoTiffParams & { workspaceCoordinateFormat?: string }): Promise<GeoTiffTable> {
+  async exec(params: LoadGeoTiffParams & { workspaceCoordinateFormat?: string }): Promise<GeotiffTable> {
     const {
       geotiffFileUrl,
       geotiffArrayBuffer,
