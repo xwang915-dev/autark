@@ -43,13 +43,10 @@ export class OsmLayersApi {
             },
         });
 
-        const boundingBox = this.db.getOsmBoundingBoxWgs84() ?? undefined;
-
         setLoadingState('Loading temperature dataset...', 'Importing 24-year land surface temperature raster.');
         await this.db.loadGeoTiff({
             geotiffFileUrl: `${URL}data/niteroi_lst_verao_2001_2024.tif`,
             outputTableName: 'lst',
-            boundingBox,
         });
 
         setLoadingState('Joining LST to road segments...', 'Averaging temperature bands within 1 km of each road.');
