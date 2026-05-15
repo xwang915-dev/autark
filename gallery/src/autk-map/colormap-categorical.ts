@@ -3,8 +3,7 @@ import {
     AutkMap,
     ColorMapDomainStrategy,
     ColorMapInterpolator,
-    LayerType,
-    MapStyle 
+        MapStyle 
 } from '@urban-toolkit/autk-map';
 
 const URL = (import.meta as any).env.BASE_URL;
@@ -35,7 +34,7 @@ export class ColormapCat {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const collection = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
     }

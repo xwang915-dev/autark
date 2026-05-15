@@ -1,7 +1,7 @@
 import { ComputeRender } from '@urban-toolkit/autk-compute';
 import { ColorMapDomainStrategy } from 'autk-core';
 import { AutkDb } from '@urban-toolkit/autk-db';
-import { AutkMap, LayerType } from '@urban-toolkit/autk-map';
+import { AutkMap } from '@urban-toolkit/autk-map';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 
 export class ComputeRenderOsmSkyExposure {
@@ -90,7 +90,7 @@ export class ComputeRenderOsmSkyExposure {
             const geojson = layerData.name === 'table_osm_roads'
                 ? this.roadsWithSky
                 : await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
     }

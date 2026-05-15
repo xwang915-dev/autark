@@ -1,5 +1,5 @@
 import type { FeatureCollection, Feature, Geometry, GeoJsonProperties } from 'geojson';
-import { AutkMap, LayerType, ColorMapInterpolator, ColorMapDomainStrategy, MapStyle, MapEvent } from '@urban-toolkit/autk-map';
+import { AutkMap, ColorMapInterpolator, ColorMapDomainStrategy, MapStyle, MapEvent } from '@urban-toolkit/autk-map';
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeGpgpu } from '@urban-toolkit/autk-compute';
 import { AutkPlot, PlotEvent, PlotStyle } from '@urban-toolkit/autk-plot';
@@ -92,7 +92,7 @@ export class OsmLayersApi {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
         }
     }
 

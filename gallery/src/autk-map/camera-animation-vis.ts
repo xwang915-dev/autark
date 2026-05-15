@@ -1,6 +1,6 @@
 // Common interface for all examples
 import { AutkDb } from '@urban-toolkit/autk-db';
-import { AutkMap, LayerType, MapStyle } from '@urban-toolkit/autk-map';
+import { AutkMap, MapStyle } from '@urban-toolkit/autk-map';
 import { CameraMotion, ColorMapDomainStrategy, ColorMapInterpolator } from 'autk-core';
 import { ComputeGpgpu } from '@urban-toolkit/autk-compute';
 import { FeatureCollection, Geometry, GeoJsonProperties } from 'geojson';
@@ -37,7 +37,7 @@ class CameraAnimationVis {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
     }
@@ -82,7 +82,7 @@ class OsmLayersApi {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
     }
@@ -159,7 +159,7 @@ class SpatialJoinNear {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
     }
@@ -249,7 +249,7 @@ class Heatmap {
                 this.map.loadCollection(layerData.name, { collection: geojson, type: 'raster', property: propertyPath });
             }
             else {
-                this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+                this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             }
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
@@ -317,7 +317,7 @@ class ComputeFunction {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
 
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }

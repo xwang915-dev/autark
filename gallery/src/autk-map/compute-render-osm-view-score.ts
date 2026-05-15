@@ -9,8 +9,7 @@ import {
 
 import {
     AutkMap,
-    LayerType,
-    MapEvent,
+        MapEvent,
 } from '@urban-toolkit/autk-map';
 
 import { AutkDb } from '@urban-toolkit/autk-db';
@@ -84,7 +83,7 @@ export class ComputeRenderOsmViewScore {
             const geojson = layerData.name === 'table_osm_buildings'
                 ? this.buildings
                 : await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
         }
     }
 

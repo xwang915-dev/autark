@@ -1,4 +1,4 @@
-import { AutkMap, LayerType } from '@urban-toolkit/autk-map';
+import { AutkMap } from '@urban-toolkit/autk-map';
 import { AutkDb } from '@urban-toolkit/autk-db';
 
 const OSM_LAYERS = ['surface', 'parks', 'water', 'roads', 'buildings'] as Array<
@@ -54,7 +54,7 @@ export class OsmLayersApi {
 
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} from workspace: ${workspace} of type ${layerData.type}`);
         }
     }

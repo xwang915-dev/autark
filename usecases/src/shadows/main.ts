@@ -6,7 +6,7 @@ import { FeatureCollection } from 'geojson';
 
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeGpgpu } from '@urban-toolkit/autk-compute';
-import { AutkMap, LayerType, MapEvent } from '@urban-toolkit/autk-map';
+import { AutkMap, MapEvent } from '@urban-toolkit/autk-map';
 import { AutkPlot, PlotEvent } from '@urban-toolkit/autk-plot';
 
 import splitRoadsQuery from './split-roads.sql?raw';
@@ -281,7 +281,7 @@ export class Shadows {
                 this.map.updateRenderInfo(layerData.name, { opacity: 0.5, isColorMap: true, isSkip: true });
             }
             else {
-                this.map.loadCollection(layerData.name, { collection: layer, type: layerData.type as LayerType });
+                this.map.loadCollection(layerData.name, { collection: layer, type: layerData.type });
             }
 
         }

@@ -4,7 +4,7 @@ import { FeatureCollection } from 'geojson';
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeGpgpu, ComputeRender } from '@urban-toolkit/autk-compute';
 import { AutkPlot, PlotEvent } from '@urban-toolkit/autk-plot';
-import { AutkMap, LayerType, MapEvent } from '@urban-toolkit/autk-map';
+import { AutkMap, MapEvent } from '@urban-toolkit/autk-map';
 import { ColorMapDomainStrategy } from 'autk-core';
 
 const URL = (import.meta as any).env.BASE_URL;
@@ -239,7 +239,7 @@ export class Urbane {
             const geojson = layerData.name === 'neighborhoods'
                 ? this.neighs
                 : await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
         }
 
         this.map.updateRenderInfo('table_osm_buildings', { isPick: false });

@@ -2,7 +2,7 @@ import { Feature, FeatureCollection, GeoJsonProperties, Point } from 'geojson';
 
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeRender } from '@urban-toolkit/autk-compute';
-import { AutkMap, LayerType, MapEvent } from '@urban-toolkit/autk-map';
+import { AutkMap, MapEvent } from '@urban-toolkit/autk-map';
 import { ColorMapDomainStrategy } from 'autk-core';
 
 export class ComputeRenderOsmVisibility {
@@ -60,7 +60,7 @@ export class ComputeRenderOsmVisibility {
             const geojson = layerData.name === 'table_osm_buildings'
                 ? this.buildingsWithVisibility
                 : await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
 

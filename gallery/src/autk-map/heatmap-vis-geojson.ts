@@ -1,7 +1,7 @@
 // TODO: filter CSV data based on the osm data polygon.
 
 import { AutkDb } from '@urban-toolkit/autk-db';
-import { AutkMap, LayerType } from '@urban-toolkit/autk-map';
+import { AutkMap } from '@urban-toolkit/autk-map';
 
 const URL = (import.meta as any).env.BASE_URL;
 
@@ -66,7 +66,7 @@ export class Heatmap {
                 this.map.loadCollection(layerData.name, { collection: geojson, type: 'raster', property: propertyPath });
             }
             else {
-                this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+                this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             }
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }

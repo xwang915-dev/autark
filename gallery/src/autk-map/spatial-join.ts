@@ -1,5 +1,5 @@
 import { AutkDb } from '@urban-toolkit/autk-db';
-import { AutkMap, ColorMapDomainStrategy, ColorMapInterpolator, LayerType } from '@urban-toolkit/autk-map';
+import { AutkMap, ColorMapDomainStrategy, ColorMapInterpolator } from '@urban-toolkit/autk-map';
 
 const URL = (import.meta as any).env.BASE_URL;
 
@@ -57,7 +57,7 @@ export class SpatialJoin {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
-            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type as LayerType });
+            this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
         }
     }
