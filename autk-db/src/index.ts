@@ -38,8 +38,6 @@ export {
   isRenderableTable,
   isVectorTable,
   isRasterTable,
-  isOsmTable,
-  isGeotiffTable,
 } from './interfaces';
 
 export type { Layer, LoadLayerParams } from './use-cases/load-layer';

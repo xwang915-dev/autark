@@ -84,10 +84,3 @@ export function isRasterTable(
   return table.type === 'raster';
 }
 
-export function isOsmTable(table: Table): table is OsmTable {
-  return table.source === 'osm' && table.type === undefined;
-}
-
-export function isGeotiffTable(table: Table): table is GeotiffTable {
-  return table.source === 'geotiff';
-}

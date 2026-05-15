@@ -8,8 +8,6 @@ import {
     CsvTable,
     GeotiffTable,
     GeojsonTable,
-    isGeotiffTable,
-    isOsmTable,
     isRenderableTable,
     JsonTable,
     OsmLayerTable,
@@ -428,7 +426,7 @@ export class AutkDb {
 
         const osmTable = this.tables.find((t) => t.name === params.osmInputTableName);
         if (!osmTable) throw new Error(`Table ${params.osmInputTableName} not found.`);
-        if (!isOsmTable(osmTable))
+        if (!(osmTable.source === 'osm' && osmTable.type === undefined))
             throw new Error(`Table ${params.osmInputTableName} is not a raw OSM table.`);
 
         const workspaceData = this.getCurrentWorkspaceData();
@@ -569,7 +567,7 @@ export class AutkDb {
             throw new Error('Database not initialized. Please call init() first.');
 
         const table = this.tables.find((t) => t.name === tableName);
-        if (!table || !isGeotiffTable(table))
+        if (!table || table.source !== 'geotiff')
             throw new Error(`Table ${tableName} is not a GeoTiff table.`);
 
         const qualifiedName = `${this.currentWorkspace}.${tableName}`;
