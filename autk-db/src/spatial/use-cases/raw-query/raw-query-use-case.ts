@@ -25,8 +25,9 @@ export class RawQueryUseCase {
       }
 
       const tableName = params.output.tableName;
+      const qualifiedTableName = `${workspace}.${tableName}`;
 
-      const createTableQuery = `CREATE OR REPLACE TABLE ${tableName} AS\n${params.query};\n\nDESCRIBE ${tableName};`;
+      const createTableQuery = `CREATE OR REPLACE TABLE ${qualifiedTableName} AS\n${params.query};\n\nDESCRIBE ${qualifiedTableName};`;
 
       const describeResult = await this.conn.query(createTableQuery);
 

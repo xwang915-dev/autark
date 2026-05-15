@@ -35,11 +35,13 @@ export class SpatialJoinUseCase {
 
     let nearUseCentroid = params.nearUseCentroid;
     if (nearUseCentroid === undefined && spatialPredicate === 'NEAR') {
-      nearUseCentroid = await this.isPolygonTable(tableRoot.name, geometricColumnRoot);
+      nearUseCentroid = await this.isPolygonTable(tableRoot.name, geometricColumnRoot, workspace);
     }
 
     const outputTableName = (params.output.type === 'CREATE_NEW' ? params.output.tableName : tableRoot.name) as string;
+    const qualifiedOutputTableName = `${workspace}.${outputTableName}`;
     const query = SPATIAL_JOIN_QUERY({
+      workspace,
       tableRoot,
       tableJoin,
       geometricColumnRoot,
@@ -54,10 +56,10 @@ export class SpatialJoinUseCase {
 
     // console.log({ query });
     const tableDescribeResponse = await this.conn.query(`
-        CREATE OR REPLACE TABLE ${outputTableName} AS
+        CREATE OR REPLACE TABLE ${qualifiedOutputTableName} AS
         ${query}
 
-        DESCRIBE ${outputTableName};
+        DESCRIBE ${qualifiedOutputTableName};
       `);
 
     return {
@@ -76,9 +78,10 @@ export class SpatialJoinUseCase {
    * For building tables, prioritizes 'agg_geometry' if available, otherwise falls back to 'geometry'.
    * For other tables, returns the first geometry column found.
    */
-  private async isPolygonTable(tableName: string, geomColumn: string): Promise<boolean> {
+  private async isPolygonTable(tableName: string, geomColumn: string, workspace: string): Promise<boolean> {
+    const qualifiedTableName = `${workspace}.${tableName}`;
     const result = await this.conn.query(
-      `SELECT ST_GeometryType("${geomColumn}") AS geom_type FROM ${tableName} WHERE "${geomColumn}" IS NOT NULL LIMIT 1`
+      `SELECT ST_GeometryType("${geomColumn}") AS geom_type FROM ${qualifiedTableName} WHERE "${geomColumn}" IS NOT NULL LIMIT 1`
     );
     const rows = result.toArray();
     if (rows.length === 0) return false;

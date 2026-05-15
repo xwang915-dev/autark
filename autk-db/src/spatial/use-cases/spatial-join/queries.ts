@@ -4,6 +4,7 @@ import { isLayerType } from 'autk-core';
 type InternalColumn = { table: Table; column: string; aggregateFn?: string; aggregateFnResultColumnName?: string; normalize?: boolean };
 
 interface Params {
+  workspace: string;
   tableRoot: Table;
   tableJoin: Table;
   geometricColumnRoot: string;
@@ -18,9 +19,12 @@ interface Params {
 
 // Alias used for the pre-filtered join table CTE in NEAR queries
 const NEAR_CTE_ALIAS = 'csv_candidates';
+const getQualifiedTableName = (workspace: string, tableName: string) => `${workspace}.${tableName}`;
 
 export const SPATIAL_JOIN_QUERY = (params: Params) => {
   const isNear = params.spatialPredicate === 'NEAR';
+  const qualifiedTableRootName = getQualifiedTableName(params.workspace, params.tableRoot.name);
+  const qualifiedTableJoinName = getQualifiedTableName(params.workspace, params.tableJoin.name);
 
   // For NEAR queries we reference the CTE alias instead of the real table name
   // in both the SELECT and JOIN clauses, so the optimizer sees a pre-filtered dataset.
@@ -54,6 +58,7 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
   const joinString = getJoinString({
     spatialPredicate: params.spatialPredicate,
     joinType: params.joinType,
+    qualifiedTableJoinName,
     tableJoin: effectiveJoinTable,
     tableRoot: params.tableRoot,
     geometricColumnRoot: params.geometricColumnRoot,
@@ -67,14 +72,14 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
   // For NEAR queries: a CTE that pre-filters the join table using an ST_Intersects
   // WHERE clause so the R-tree index fires. Stored separately so it can be combined
   // with a normalization CTE when needed.
-  const rootGeomExpr = (col: string) =>
-    params.nearUseCentroid ? `ST_Centroid("${col}")` : `"${col}"`;
+  const rootGeomExpr = (tableAlias: string, col: string) =>
+    params.nearUseCentroid ? `ST_Centroid(${tableAlias}."${col}")` : `${tableAlias}."${col}"`;
 
   const nearCtePart = isNear
     ? `${NEAR_CTE_ALIAS} AS (
-        SELECT * FROM ${params.tableJoin.name}
+        SELECT * FROM ${qualifiedTableJoinName} AS ${params.tableJoin.name}
         WHERE ST_Intersects(
-          (SELECT ST_Union_Agg(ST_Expand(${rootGeomExpr(params.geometricColumnRoot)}, ${params.nearDistance})) FROM ${params.tableRoot.name}),
+          (SELECT ST_Union_Agg(ST_Expand(${rootGeomExpr(params.tableRoot.name, params.geometricColumnRoot)}, ${params.nearDistance})) FROM ${qualifiedTableRootName} AS ${params.tableRoot.name}),
           ${params.tableJoin.name}."${params.geometricColumnJoin}"
         )
       )`
@@ -82,7 +87,7 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
 
   const innerQuery = `
     ${selectString}
-    FROM ${params.tableRoot.name}
+    FROM ${qualifiedTableRootName} AS ${params.tableRoot.name}
     ${joinString}
     ${params.groupBy ? groupByString : ''}
   `;
@@ -384,6 +389,7 @@ function buildSimpleJoinSelect(tableRoot: Table, tableJoin: Table, geometricColu
 function getJoinString({
   spatialPredicate,
   joinType,
+  qualifiedTableJoinName,
   tableJoin,
   tableRoot,
   geometricColumnRoot,
@@ -393,6 +399,7 @@ function getJoinString({
 }: {
   spatialPredicate: string;
   joinType: string;
+  qualifiedTableJoinName: string;
   tableJoin: Table;
   tableRoot: Table;
   geometricColumnRoot: string;
@@ -410,7 +417,7 @@ function getJoinString({
     return `${joinType || ''} JOIN ${tableJoin.name} ON ST_Distance(${rootExpr}, ${joinExpr}) <= ${nearDistance}`;
   }
 
-  return `${joinType || ''} JOIN ${tableJoin.name} ON ST_Intersects( ${tableRoot.name}."${geometricColumnRoot}", ${tableJoin.name}."${geometricColumnJoin}")`;
+  return `${joinType || ''} JOIN ${qualifiedTableJoinName} AS ${tableJoin.name} ON ST_Intersects(${tableRoot.name}."${geometricColumnRoot}", ${tableJoin.name}."${geometricColumnJoin}")`;
 }
 
 /* Group By Logic */
