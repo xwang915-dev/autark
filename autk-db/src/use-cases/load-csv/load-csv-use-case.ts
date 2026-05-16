@@ -174,10 +174,14 @@ export class LoadCsvUseCase {
 
       const message = error instanceof Error ? error.message : String(error);
       if (normalizedGeometryColumns?.mode === 'wkt') {
-        throw new Error(`Failed to load CSV geometry from WKT column '${normalizedGeometryColumns.wktColumnName}': ${message}`, { cause: error });
+        const wrappedError = new Error(`Failed to load CSV geometry from WKT column '${normalizedGeometryColumns.wktColumnName}': ${message}`) as Error & { cause?: unknown };
+        wrappedError.cause = error;
+        throw wrappedError;
       }
       if (normalizedGeometryColumns?.mode === 'lat-lng') {
-        throw new Error(`Failed to load CSV geometry from latitude/longitude columns '${normalizedGeometryColumns.latColumnName}' and '${normalizedGeometryColumns.longColumnName}': ${message}`, { cause: error });
+        const wrappedError = new Error(`Failed to load CSV geometry from latitude/longitude columns '${normalizedGeometryColumns.latColumnName}' and '${normalizedGeometryColumns.longColumnName}': ${message}`) as Error & { cause?: unknown };
+        wrappedError.cause = error;
+        throw wrappedError;
       }
       throw error;
     } finally {
