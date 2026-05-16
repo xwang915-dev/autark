@@ -94,15 +94,15 @@ export interface GeojsonTable extends BaseTable {
 }
 
 /**
- * CSV table without geometry metadata.
+ * CSV table that may remain tabular or expose renderable geometry.
  *
- * Represents plain tabular data loaded from comma-separated values.
+ * Represents comma-separated data and can become a point, polyline, or polygon layer when geometry columns are configured during loading.
  */
 export interface CsvTable extends BaseTable {
   /** Marks the table as originating from the CSV loader. */
   source: 'csv';
-  /** Remains undefined because CSV imports are not renderable by default. */
-  type?: undefined;
+  /** Optional renderable layer type when geometry columns were materialized during CSV loading. */
+  type?: Exclude<LayerType, 'raster'>;
 }
 
 /**
@@ -194,7 +194,7 @@ export function isRenderableTable(table: Table): table is Table & { type: LayerT
  */
 export function isVectorTable(
   table: Table,
-): table is OsmLayerTable | GeojsonTable | (UserTable & { type: Exclude<LayerType, 'raster'> }) {
+): table is OsmLayerTable | GeojsonTable | (CsvTable & { type: Exclude<LayerType, 'raster'> }) | (UserTable & { type: Exclude<LayerType, 'raster'> }) {
   return table.type !== undefined && table.type !== 'raster';
 }
 

@@ -1,8 +1,8 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import { LoadCsvParams } from './interfaces';
+import { CsvGeometryLayerType, LoadCsvParams } from './interfaces';
 import { CsvTable } from '../../interfaces';
-import { LOAD_CSV_ON_TABLE_QUERY, LOAD_CSV_ON_TABLE_WITH_COORDINATES_QUERY } from './queries';
+import { LOAD_CSV_ON_TABLE_QUERY, LOAD_CSV_ON_TABLE_WITH_COORDINATES_QUERY, LOAD_CSV_ON_TABLE_WITH_WKT_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT, DEFAULT_GEO_COLUMN_NAME } from '../../consts';
 
@@ -37,16 +37,59 @@ export class LoadCsvUseCase {
     await this.db.registerFileText(csvPath, csvString);
 
     const qualifiedTableName = `${workspace}.${outputTableName}`;
+    let tableCreated = false;
+    let tableType: CsvTable['type'];
+    const normalizedGeometryColumns = geometryColumns === true
+      ? {
+          mode: 'lat-lng' as const,
+          latColumnName: 'Latitude',
+          longColumnName: 'Longitude',
+          coordinateFormat: DEFAULT_INPUT_COORDINATE_FORMAT,
+        }
+      : geometryColumns && 'wktColumnName' in geometryColumns
+        ? {
+            mode: 'wkt' as const,
+            wktColumnName: geometryColumns.wktColumnName,
+            coordinateFormat: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+          }
+        : geometryColumns
+          ? {
+              mode: 'lat-lng' as const,
+              latColumnName: geometryColumns.latColumnName,
+              longColumnName: geometryColumns.longColumnName,
+              coordinateFormat: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+            }
+          : null;
+
+    if (normalizedGeometryColumns?.mode === 'lat-lng') {
+      if (!normalizedGeometryColumns.latColumnName.trim() || !normalizedGeometryColumns.longColumnName.trim()) {
+        throw new Error('Both latColumnName and longColumnName must be provided when using CSV latitude/longitude geometry columns.');
+      }
+    }
+    if (normalizedGeometryColumns?.mode === 'wkt' && !normalizedGeometryColumns.wktColumnName.trim()) {
+      throw new Error('wktColumnName must be provided when using CSV WKT geometry columns.');
+    }
 
     let loadCsvQuery: string;
-    if (geometryColumns) {
+    if (normalizedGeometryColumns?.mode === 'lat-lng') {
       loadCsvQuery = LOAD_CSV_ON_TABLE_WITH_COORDINATES_QUERY({
         csvFileUrl: csvPath,
         tableName: outputTableName,
         delimiter,
-        latColumnName: geometryColumns.latColumnName,
-        longColumnName: geometryColumns.longColumnName,
-        sourceCrs: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+        latColumnName: normalizedGeometryColumns.latColumnName,
+        longColumnName: normalizedGeometryColumns.longColumnName,
+        sourceCrs: normalizedGeometryColumns.coordinateFormat,
+        targetCrs: workspaceCoordinateFormat,
+        workspace,
+      });
+      tableType = 'points';
+    } else if (normalizedGeometryColumns?.mode === 'wkt') {
+      loadCsvQuery = LOAD_CSV_ON_TABLE_WITH_WKT_QUERY({
+        csvFileUrl: csvPath,
+        tableName: outputTableName,
+        delimiter,
+        wktColumnName: normalizedGeometryColumns.wktColumnName,
+        sourceCrs: normalizedGeometryColumns.coordinateFormat,
         targetCrs: workspaceCoordinateFormat,
         workspace,
       });
@@ -54,21 +97,98 @@ export class LoadCsvUseCase {
       loadCsvQuery = LOAD_CSV_ON_TABLE_QUERY(csvPath, outputTableName, delimiter, workspace);
     }
 
-    const describeTableResponse = await this.conn.query(loadCsvQuery);
+    try {
+      const describeTableResponse = await this.conn.query(loadCsvQuery);
+      tableCreated = true;
+      const columns = getColumnsFromDuckDbTableDescribe(describeTableResponse.toArray());
 
-    // Automatically create spatial index for geometry column
-    if (geometryColumns) {
-      const indexName = `idx_${outputTableName}_geometry`;
-      await this.conn.query(`CREATE INDEX ${indexName} ON ${qualifiedTableName} USING RTREE (${DEFAULT_GEO_COLUMN_NAME});`);
+      if (normalizedGeometryColumns) {
+        await this.ensureAllRowsHaveGeometry(qualifiedTableName);
+
+        if (normalizedGeometryColumns.mode === 'wkt') {
+          tableType = await this.inferWktLayerType(qualifiedTableName, normalizedGeometryColumns.wktColumnName);
+        }
+
+        const indexName = `idx_${outputTableName}_geometry`;
+        await this.conn.query(`CREATE INDEX ${indexName} ON ${qualifiedTableName} USING RTREE (${DEFAULT_GEO_COLUMN_NAME});`);
+      }
+
+      return {
+        source: 'csv',
+        name: outputTableName,
+        columns,
+        type: tableType,
+      };
+    } catch (error) {
+      if (tableCreated) {
+        await this.conn.query(`DROP TABLE IF EXISTS ${qualifiedTableName}`);
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      if (normalizedGeometryColumns?.mode === 'wkt') {
+        throw new Error(`Failed to load CSV geometry from WKT column '${normalizedGeometryColumns.wktColumnName}': ${message}`);
+      }
+      if (normalizedGeometryColumns?.mode === 'lat-lng') {
+        throw new Error(`Failed to load CSV geometry from latitude/longitude columns '${normalizedGeometryColumns.latColumnName}' and '${normalizedGeometryColumns.longColumnName}': ${message}`);
+      }
+      throw error;
+    } finally {
+      await this.db.dropFile(csvPath);
+    }
+  }
+
+  private async ensureAllRowsHaveGeometry(qualifiedTableName: string): Promise<void> {
+    const response = await this.conn.query(`
+      SELECT COUNT(*) AS total_rows, COUNT(${DEFAULT_GEO_COLUMN_NAME}) AS geometry_rows
+      FROM ${qualifiedTableName}
+    `);
+    const row = response.toArray()[0] as { total_rows?: number | bigint; geometry_rows?: number | bigint } | undefined;
+    const totalRows = Number(row?.total_rows ?? 0);
+    const geometryRows = Number(row?.geometry_rows ?? 0);
+
+    if (totalRows !== geometryRows) {
+      throw new Error(`Geometry creation produced ${totalRows - geometryRows} null geometries.`);
+    }
+  }
+
+  private async inferWktLayerType(qualifiedTableName: string, wktColumnName: string): Promise<CsvGeometryLayerType> {
+    const response = await this.conn.query(`
+      SELECT DISTINCT CAST(ST_GeometryType(${DEFAULT_GEO_COLUMN_NAME}) AS VARCHAR) AS geometry_type
+      FROM ${qualifiedTableName}
+      WHERE ${DEFAULT_GEO_COLUMN_NAME} IS NOT NULL
+      ORDER BY geometry_type
+    `);
+
+    const rawGeometryTypes = response.toArray().map((row: { geometry_type?: unknown }) => String(row.geometry_type ?? '').toUpperCase());
+    if (rawGeometryTypes.length === 0) {
+      throw new Error(`Could not infer a layer type from WKT column '${wktColumnName}' because no non-null geometries were created.`);
     }
 
-    await this.db.dropFile(csvPath);
+    const inferredLayerTypes = new Set<CsvGeometryLayerType>();
+    for (const rawGeometryType of rawGeometryTypes) {
+      switch (rawGeometryType) {
+        case 'POINT':
+        case 'MULTIPOINT':
+          inferredLayerTypes.add('points');
+          break;
+        case 'LINESTRING':
+        case 'MULTILINESTRING':
+          inferredLayerTypes.add('polylines');
+          break;
+        case 'POLYGON':
+        case 'MULTIPOLYGON':
+          inferredLayerTypes.add('polygons');
+          break;
+        default:
+          throw new Error(`Unsupported WKT geometry type '${rawGeometryType}' in column '${wktColumnName}'.`);
+      }
+    }
 
-    return {
-      source: 'csv',
-      name: outputTableName,
-      columns: getColumnsFromDuckDbTableDescribe(describeTableResponse.toArray()),
-    };
+    if (inferredLayerTypes.size !== 1) {
+      throw new Error(`WKT column '${wktColumnName}' contains mixed geometry families: ${rawGeometryTypes.join(', ')}.`);
+    }
+
+    return Array.from(inferredLayerTypes)[0];
   }
 
   private buildCsvString(csvObject: unknown[][], delimiter: string): string {

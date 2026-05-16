@@ -1,2 +1,9 @@
 export * from './load-csv-use-case';
-export type { LoadCsvParams } from './interfaces';
+export type {
+  CsvDefaultLatLngGeometryColumns,
+  CsvLatLngGeometryColumns,
+  CsvWktGeometryColumns,
+  CsvGeometryColumns,
+  CsvGeometryLayerType,
+  LoadCsvParams,
+} from './interfaces';

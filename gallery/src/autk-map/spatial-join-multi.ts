@@ -20,34 +20,30 @@ export class SpatialJoin {
         const CSVs = ['noise', 'parking'];
 
         for (const csv of CSVs) {
-        await this.db.loadCsv({
-            csvFileUrl: `${URL}data/${csv}.csv`,
-            outputTableName: csv,
-            geometryColumns: {
-                latColumnName: 'Latitude',
-                longColumnName: 'Longitude',
-            },
-        });
+            await this.db.loadCsv({
+                csvFileUrl: `${URL}data/${csv}.csv`,
+                outputTableName: csv,
+                geometryColumns: true,
+            });
 
-        await this.db.spatialQuery({
-            tableRootName: 'neighborhoods',
-            tableJoinName: csv,
-            spatialPredicate: 'INTERSECT',
-            output: {
-                type: 'MODIFY_ROOT',
-            },
-            joinType: 'LEFT',
-            groupBy: {
-                selectColumns: [
-                    {
-                        tableName: csv,
-                        column: 'Unique Key',
-                        aggregateFn: 'count',
-                    },
-                ],
-            },
-        });
-
+            await this.db.spatialQuery({
+                tableRootName: 'neighborhoods',
+                tableJoinName: csv,
+                spatialPredicate: 'INTERSECT',
+                output: {
+                    type: 'MODIFY_ROOT',
+                },
+                joinType: 'LEFT',
+                groupBy: {
+                    selectColumns: [
+                        {
+                            tableName: csv,
+                            column: 'Unique Key',
+                            aggregateFn: 'count',
+                        },
+                    ],
+                },
+            });
         }
 
         this.map = new AutkMap(canvas);
@@ -62,8 +58,11 @@ export class SpatialJoin {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const collection = await this.db.getLayer(layerData.name);
+
             this.map.loadCollection(layerData.name, { collection, type: layerData.type });
-            console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
+            this.map.updateRenderInfo(layerData.name, { isSkip: layerData.source === 'csv' });
+
+            console.log(`Loading layer: ${layerData.name} from ${layerData.source} of type ${layerData.type}`);
         }
     }
 

@@ -391,16 +391,18 @@ export class AutkDb {
     }
 
     /**
-     * Loads a CSV file into the database, optionally creating a geometry column from lat/lng columns.
+     * Loads a CSV file into the database, optionally creating geometry from coordinate or WKT columns.
      *
-     * @param params - File URL or array, table name, and optional coordinate column mapping.
+     * Supports the default `Latitude` / `Longitude` shorthand, custom lat/lng column names, or a single WKT geometry column.
+     *
+     * @param params - File URL or array, table name, and optional geometry column mapping.
      * @returns The created CSV table metadata.
-     * @throws If the database is not initialized, or both `csvFileUrl` and `csvObject` are provided.
+     * @throws If the database is not initialized, both `csvFileUrl` and `csvObject` are provided, geometry creation fails, or WKT geometry families are mixed.
      * @example
      * const table = await db.loadCsv({
      *   csvFileUrl: '/data/stations.csv',
      *   outputTableName: 'stations',
-     *   geometryColumns: { latColumnName: 'lat', longColumnName: 'lng' },
+     *   geometryColumns: true,
      * });
      */
     async loadCsv(params: LoadCsvParams): Promise<CsvTable> {

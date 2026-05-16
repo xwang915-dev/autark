@@ -29,10 +29,7 @@ export class SpatialJoinNear {
         await this.db.loadCsv({
             csvFileUrl: `${URL}data/noise.csv`,
             outputTableName: 'noise',
-            geometryColumns: {
-                latColumnName: 'Latitude',
-                longColumnName: 'Longitude',
-            },
+            geometryColumns: true,
         });
 
         const layer = 'table_osm_buildings';
@@ -69,8 +66,11 @@ export class SpatialJoinNear {
     protected async loadLayers(): Promise<void> {
         for (const layerData of this.db.getLayerTables()) {
             const geojson = await this.db.getLayer(layerData.name);
+
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
-            console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
+            this.map.updateRenderInfo(layerData.name, { isSkip: layerData.source === 'csv' });
+
+            console.log(`Loading layer: ${layerData.name} from ${layerData.source} of type ${layerData.type}`);
         }
     }
 

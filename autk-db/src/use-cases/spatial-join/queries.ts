@@ -1,4 +1,4 @@
-import { isRenderableTable, Table } from '../../interfaces';
+import { Table } from '../../interfaces';
 
 type InternalColumn = { table: Table; column: string; aggregateFn?: string; aggregateFnResultColumnName?: string; normalize?: boolean };
 
@@ -16,7 +16,6 @@ interface Params {
   outputTableName: string;
 }
 
-// Alias used for the pre-filtered join table CTE in NEAR queries
 const NEAR_CTE_ALIAS = 'csv_candidates';
 const getQualifiedTableName = (workspace: string, tableName: string) => `${workspace}.${tableName}`;
 
@@ -25,20 +24,14 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
   const qualifiedTableRootName = getQualifiedTableName(params.workspace, params.tableRoot.name);
   const qualifiedTableJoinName = getQualifiedTableName(params.workspace, params.tableJoin.name);
 
-  // For NEAR queries we reference the CTE alias instead of the real table name
-  // in both the SELECT and JOIN clauses, so the optimizer sees a pre-filtered dataset.
   const effectiveJoinTable: Table = isNear
     ? { ...params.tableJoin, name: NEAR_CTE_ALIAS }
     : params.tableJoin;
 
-  // Also remap any groupBy column references that point to the join table so that
-  // generated expressions like COUNT(noise."col") become COUNT(csv_candidates."col").
   const effectiveGroupBy = isNear && params.groupBy
     ? {
       selectColumns: params.groupBy.selectColumns.map((col) => ({
         ...col,
-        // Preserve the original table name as the result column name so the generated
-        // JSON key stays e.g. 'noise' instead of falling back to 'csv_candidates'.
         aggregateFnResultColumnName: col.aggregateFnResultColumnName ?? (col.table.name === params.tableJoin.name ? col.table.name : undefined),
         table: col.table.name === params.tableJoin.name ? effectiveJoinTable : col.table,
       })),
@@ -68,18 +61,15 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
 
   const groupByString = getGroupByString(params.tableRoot);
 
-  // For NEAR queries: a CTE that pre-filters the join table using an ST_Intersects
-  // WHERE clause so the R-tree index fires. Stored separately so it can be combined
-  // with a normalization CTE when needed.
   const rootGeomExpr = (tableAlias: string, col: string) =>
-    params.nearUseCentroid ? `ST_Centroid(${tableAlias}."${col}")` : `${tableAlias}."${col}"`;
+    params.nearUseCentroid ? `ST_Centroid(${tableAlias}.${quoteIdentifier(col)})` : `${tableAlias}.${quoteIdentifier(col)}`;
 
   const nearCtePart = isNear
     ? `${NEAR_CTE_ALIAS} AS (
         SELECT * FROM ${qualifiedTableJoinName} AS ${params.tableJoin.name}
         WHERE ST_Intersects(
           (SELECT ST_Union_Agg(ST_Expand(${rootGeomExpr(params.tableRoot.name, params.geometricColumnRoot)}, ${params.nearDistance})) FROM ${qualifiedTableRootName} AS ${params.tableRoot.name}),
-          ${params.tableJoin.name}."${params.geometricColumnJoin}"
+          ${params.tableJoin.name}.${quoteIdentifier(params.geometricColumnJoin)}
         )
       )`
     : null;
@@ -109,7 +99,6 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
   `;
 };
 
-/* Select Logic */
 function getSelectString(params: {
   tableRoot: Table;
   tableJoin: Table;
@@ -128,11 +117,7 @@ function getSelectString(params: {
       nearUseCentroid: params.nearUseCentroid,
     });
 
-    // Get all additional columns from tableRoot (excluding geometry and properties)
-    const additionalColumns = params.tableRoot.columns
-      .filter((col) => col.name !== 'geometry' && col.name !== 'properties')
-      .map((col) => `${params.tableRoot.name}.${col.name}`);
-
+    const additionalColumns = getAdditionalRootColumns(params.tableRoot);
     const additionalColumnsStr =
       additionalColumns.length > 0 ? `,\n        ${additionalColumns.join(',\n        ')}` : '';
 
@@ -140,7 +125,7 @@ function getSelectString(params: {
       SELECT 
         ${params.tableRoot.name}.geometry,
         json_merge_patch(
-          COALESCE(CAST("${params.tableRoot.name}".properties AS JSON), '{}'::JSON),
+          ${buildPropertiesObjectExpression(params.tableRoot)},
           json_object(
             'sjoin', json_object(
               ${sjoinObjectSql}
@@ -190,7 +175,6 @@ function buildSjoinObject(
 ): string {
   const sjoinParts: string[] = [];
 
-  // Handle aggregate functions
   Object.entries(aggregatesByFunction).forEach(([funcName, columns]) => {
     if (funcName === 'count') {
       sjoinParts.push(buildCountExpression(columns[0]));
@@ -203,7 +187,6 @@ function buildSjoinObject(
     }
   });
 
-  // Handle non-aggregate columns
   if (nonAggregateColumns.length > 0) {
     sjoinParts.push(buildNonAggregateColumns(nonAggregateColumns));
   }
@@ -217,31 +200,25 @@ function buildWeightedExpression(
 ): string {
   const { tableRoot, tableJoin, geometricColumnRoot, geometricColumnJoin, nearUseCentroid } = geomContext;
   const rootGeom = nearUseCentroid
-    ? `ST_Centroid(${tableRoot.name}."${geometricColumnRoot}")`
-    : `${tableRoot.name}."${geometricColumnRoot}"`;
+    ? `ST_Centroid(${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)})`
+    : `${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)}`;
   const joinGeom = nearUseCentroid
-    ? `ST_Centroid(${tableJoin.name}."${geometricColumnJoin}")`
-    : `${tableJoin.name}."${geometricColumnJoin}"`;
+    ? `ST_Centroid(${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)})`
+    : `${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)}`;
   const columnName = column.aggregateFnResultColumnName ?? column.table.name;
-  return `'weighted', json_object('${columnName}', SUM(1.0 / (ST_Distance(${rootGeom}, ${joinGeom}) + 1.0)))`;
+  return `'weighted', json_object('${escapeSqlString(columnName)}', SUM(1.0 / (ST_Distance(${rootGeom}, ${joinGeom}) + 1.0)))`;
 }
 
 function buildCollectExpression(column: { table: Table; column: string; aggregateFnResultColumnName?: string }): string {
   const columnName = column.aggregateFnResultColumnName ?? column.table.name;
   const valueExpression = generateValueExpression(column.table, column.column, 'COLLECT');
-  return `'collect', json_object('${columnName}', ${valueExpression})`;
-}
-
-function buildCollectColumnExpression(table: Table, columnName: string): string {
-  if (table.source === 'geotiff') return `${table.name}.properties.${columnName}`;
-  if (isRenderableTable(table)) return buildJsonExtract(table.name, columnName);
-  return `${table.name}."${columnName}"`;
+  return `'collect', json_object('${escapeSqlString(columnName)}', ${valueExpression})`;
 }
 
 function buildCountExpression(column: { table: Table; column: string; aggregateFnResultColumnName?: string }): string {
   const valueExpression = generateValueExpression(column.table, column.column, 'COUNT');
   const columnName = column.aggregateFnResultColumnName || column.table.name;
-  return `'count', json_object('${columnName}', ${valueExpression})`;
+  return `'count', json_object('${escapeSqlString(columnName)}', ${valueExpression})`;
 }
 
 function buildNestedFunctionExpression(
@@ -252,11 +229,11 @@ function buildNestedFunctionExpression(
     .map((column) => {
       const valueExpression = generateValueExpression(column.table, column.column, funcName.toUpperCase());
       const columnName = column.aggregateFnResultColumnName || `${column.table.name}.${column.column}`;
-      return `'${columnName}', ${valueExpression}`;
+      return `'${escapeSqlString(columnName)}', ${valueExpression}`;
     })
     .join(', ');
 
-  return `'${funcName}', json_object(${functionAttributes})`;
+  return `'${escapeSqlString(funcName)}', json_object(${functionAttributes})`;
 }
 
 function buildNonAggregateColumns(
@@ -264,59 +241,60 @@ function buildNonAggregateColumns(
 ): string {
   return nonAggregateColumns
     .map((column) => {
-      const valueExpression = column.table.source === 'geotiff'
-        ? `${column.table.name}.properties.${column.column}`
-        : isRenderableTable(column.table)
-          ? buildJsonExtract(column.table.name, column.column)
-          : `${column.table.name}."${column.column}"`;
+      const valueExpression = buildColumnValueExpression(column.table, column.column);
       const columnName = column.aggregateFnResultColumnName || column.column;
-      return `'${columnName}', ${valueExpression}`;
+      return `'${escapeSqlString(columnName)}', ${valueExpression}`;
     })
     .join(', ');
 }
 
 function generateValueExpression(table: Table, columnName: string, aggregateFunction: string): string {
   if (aggregateFunction === 'COLLECT') {
-    // '*' collects the entire properties object of the join row; otherwise collects a specific column.
     if (columnName === '*') {
-      if (table.source === 'geotiff') return `json_group_array(${table.name}.properties)`;
-      if (isRenderableTable(table)) return `json_group_array(CAST(${table.name}.properties AS JSON))`;
-      // CSV/JSON tables: build a json_object from all non-geometry columns
-      const cols = table.columns
-        .filter(c => c.name !== 'geometry')
-        .map(c => `'${c.name}', ${table.name}."${c.name}"`)
-        .join(', ');
-      return `json_group_array(json_object(${cols}))`;
+      return `json_group_array(${buildRowObjectExpression(table)})`;
     }
-    // Single-column collect: wrap in json_object so consumers always get an array of objects.
-    const colExpr = buildCollectColumnExpression(table, columnName);
-    return `json_group_array(json_object('${columnName}', ${colExpr}))`;
+    const colExpr = buildColumnValueExpression(table, columnName);
+    return `json_group_array(json_object('${escapeSqlString(columnName)}', ${colExpr}))`;
   }
-  if (table.source === 'geotiff') {
-    return `${aggregateFunction}(${table.name}.properties.${columnName})`;
-  }
-  if (isRenderableTable(table)) {
-    const extract = buildJsonExtract(table.name, columnName);
-    const castExpr = aggregateFunction === 'COUNT' ? extract : `CAST(${extract} AS DOUBLE)`;
-    return `${aggregateFunction}(${castExpr})`;
-  }
-  return `${aggregateFunction}(${table.name}."${columnName}")`;
+
+  const valueExpression = buildColumnValueExpression(table, columnName);
+  const castExpr = aggregateFunction === 'COUNT' ? valueExpression : `CAST(${valueExpression} AS DOUBLE)`;
+  return `${aggregateFunction}(${castExpr})`;
 }
 
-/**
- * Builds a DuckDB JSON/STRUCT extraction expression for a (possibly nested) column path.
- * Supports dot-notation paths like 'compute.skyViewFactor'.
- * Uses chained -> / ->> operators which work for both DuckDB STRUCT and JSON column types.
- */
+function buildColumnValueExpression(table: Table, columnPath: string): string {
+  if (hasPropertiesColumn(table)) {
+    return buildJsonExtract(table.name, columnPath);
+  }
+  return buildDirectColumnReference(table.name, columnPath);
+}
+
+function buildPropertiesObjectExpression(table: Table): string {
+  if (hasPropertiesColumn(table)) {
+    return `COALESCE(CAST(${table.name}.properties AS JSON), '{}'::JSON)`;
+  }
+  return buildRowObjectExpression(table);
+}
+
+function buildRowObjectExpression(table: Table): string {
+  const propertyColumns = table.columns.filter((column) => column.type !== 'GEOMETRY' && column.name !== 'properties');
+  if (propertyColumns.length === 0) {
+    return `'{}'::JSON`;
+  }
+
+  return `json_object(${propertyColumns
+    .map((column) => `'${escapeSqlString(column.name)}', ${buildDirectColumnReference(table.name, column.name)}`)
+    .join(', ')})`;
+}
+
 function buildJsonExtract(tableName: string, columnPath: string): string {
   const parts = columnPath.split('.');
   const last = parts.pop()!;
-  const chain = parts.reduce((acc, p) => `${acc}->'${p}'`, `${tableName}.properties`);
-  return `${chain}->>'${last}'`;
+  const chain = parts.reduce((acc, p) => `${acc}->'${escapeSqlString(p)}'`, `${tableName}.properties`);
+  return `${chain}->>'${escapeSqlString(last)}'`;
 }
 
 function buildNormalizationMergePatch(normalizedColumns: Array<InternalColumn>): string {
-  // Group columns by aggregateFn so we can build the nested sjoin JSON structure
   const byAggFn: Record<string, Array<{ colKey: string; jsonPath: string }>> = {};
 
   for (const col of normalizedColumns) {
@@ -335,14 +313,14 @@ function buildNormalizationMergePatch(normalizedColumns: Array<InternalColumn>):
     .map(([funcName, cols]) => {
       const colParts = cols
         .map(({ colKey, jsonPath }) => {
-          const rawVal = `COALESCE(json_extract(properties, '${jsonPath}')::DOUBLE, 0)`;
+          const rawVal = `COALESCE(json_extract(properties, '${escapeSqlString(jsonPath)}')::DOUBLE, 0)`;
           const normExpr =
             `(${rawVal} - MIN(${rawVal}) OVER ()) / ` +
             `NULLIF(MAX(${rawVal}) OVER () - MIN(${rawVal}) OVER (), 0)`;
-          return `'${colKey}_norm', ${normExpr}`;
+          return `'${escapeSqlString(colKey)}_norm', ${normExpr}`;
         })
         .join(',\n          ');
-      return `'${funcName}', json_object(${colParts})`;
+      return `'${escapeSqlString(funcName)}', json_object(${colParts})`;
     })
     .join(',\n      ');
 
@@ -355,22 +333,15 @@ function buildNormalizationMergePatch(normalizedColumns: Array<InternalColumn>):
 }
 
 function buildSimpleJoinSelect(tableRoot: Table, tableJoin: Table, geometricColumnJoin: string): string {
-  // Get all additional columns from tableRoot (excluding geometry and properties)
-  const additionalColumns = tableRoot.columns
-    .filter((col) => col.name !== 'geometry' && col.name !== 'properties')
-    .map((col) => `${tableRoot.name}.${col.name}`);
-
+  const additionalColumns = getAdditionalRootColumns(tableRoot);
   const additionalColumnsStr =
     additionalColumns.length > 0 ? `,\n        ${additionalColumns.join(',\n        ')}` : '';
 
-  // When the join table is a layer type (OSM / GeoJSON), its data lives in a 'properties'
-  // JSON column. Using json_object(tableJoin.properties) would fail because json_object()
-  // requires an even number of key-value pair arguments. Instead, merge the JSON blob directly.
-  const joinPropertiesExpr = isRenderableTable(tableJoin)
+  const joinPropertiesExpr = hasPropertiesColumn(tableJoin)
     ? `COALESCE(CAST(${tableJoin.name}.properties AS JSON), '{}'::JSON)`
     : `json_object(${tableJoin.columns
-        .filter((column) => column.name !== geometricColumnJoin)
-        .map((column) => `'${column.name}', ${tableJoin.name}."${column.name}"`)
+        .filter((column) => column.name !== geometricColumnJoin && column.type !== 'GEOMETRY')
+        .map((column) => `'${escapeSqlString(column.name)}', ${buildDirectColumnReference(tableJoin.name, column.name)}`)
         .join(', ')})`;
 
   return `
@@ -378,13 +349,11 @@ function buildSimpleJoinSelect(tableRoot: Table, tableJoin: Table, geometricColu
         ${tableRoot.name}.geometry,
         json_merge_patch(
           json_object('sjoin', ${joinPropertiesExpr}),
-          COALESCE(CAST("${tableRoot.name}".properties AS JSON), '{}'::JSON)
+          ${buildPropertiesObjectExpression(tableRoot)}
         ) AS properties${additionalColumnsStr}
     `;
 }
 
-
-/* Join Logic */
 function getJoinString({
   spatialPredicate,
   joinType,
@@ -408,27 +377,44 @@ function getJoinString({
 }) {
   if (spatialPredicate === 'NEAR') {
     const rootExpr = nearUseCentroid
-      ? `ST_Centroid(${tableRoot.name}."${geometricColumnRoot}")`
-      : `${tableRoot.name}."${geometricColumnRoot}"`;
+      ? `ST_Centroid(${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)})`
+      : `${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)}`;
     const joinExpr = nearUseCentroid
-      ? `ST_Centroid(${tableJoin.name}."${geometricColumnJoin}")`
-      : `${tableJoin.name}."${geometricColumnJoin}"`;
+      ? `ST_Centroid(${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)})`
+      : `${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)}`;
     return `${joinType || ''} JOIN ${tableJoin.name} ON ST_Distance(${rootExpr}, ${joinExpr}) <= ${nearDistance}`;
   }
 
-  return `${joinType || ''} JOIN ${qualifiedTableJoinName} AS ${tableJoin.name} ON ST_Intersects(${tableRoot.name}."${geometricColumnRoot}", ${tableJoin.name}."${geometricColumnJoin}")`;
+  return `${joinType || ''} JOIN ${qualifiedTableJoinName} AS ${tableJoin.name} ON ST_Intersects(${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)}, ${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)})`;
 }
 
-/* Group By Logic */
 function getGroupByString(tableRoot: Table) {
-  // Get all additional columns from tableRoot (excluding geometry and properties)
-  const additionalColumns = tableRoot.columns
-    .filter((col) => col.name !== 'geometry' && col.name !== 'properties')
-    .map((col) => `${tableRoot.name}.${col.name}`);
-
-  const allGroupByColumns = [`${tableRoot.name}.geometry`, `${tableRoot.name}.properties`, ...additionalColumns];
+  const additionalColumns = getAdditionalRootColumns(tableRoot);
+  const allGroupByColumns = [`${tableRoot.name}.geometry`, ...(hasPropertiesColumn(tableRoot) ? [`${tableRoot.name}.properties`] : []), ...additionalColumns];
 
   return `
     GROUP BY ${allGroupByColumns.join(', ')}
   `;
+}
+
+function getAdditionalRootColumns(tableRoot: Table): string[] {
+  return tableRoot.columns
+    .filter((col) => col.name !== 'geometry' && col.name !== 'properties')
+    .map((col) => `${tableRoot.name}.${quoteIdentifier(col.name)}`);
+}
+
+function hasPropertiesColumn(table: Table): boolean {
+  return table.columns.some((column) => column.name === 'properties');
+}
+
+function buildDirectColumnReference(tableName: string, columnName: string): string {
+  return `${tableName}.${quoteIdentifier(columnName)}`;
+}
+
+function quoteIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''");
 }

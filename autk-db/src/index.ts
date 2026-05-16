@@ -59,7 +59,14 @@ export type {
 } from './use-cases/load-osm-from-overpass-api';
 export type { SpatialQueryParams, AggregateFunction } from './use-cases/spatial-join';
 export type { BuildHeatmapParams, HeatmapAggregateFunction } from './use-cases/build-heatmap';
-export type { LoadCsvParams } from './use-cases/load-csv';
+export type {
+  CsvDefaultLatLngGeometryColumns,
+  CsvLatLngGeometryColumns,
+  CsvWktGeometryColumns,
+  CsvGeometryColumns,
+  CsvGeometryLayerType,
+  LoadCsvParams,
+} from './use-cases/load-csv';
 export type { LoadCustomLayerParams } from './use-cases/load-custom-layer';
 export type { LoadGridLayerParams } from './use-cases/load-grid-layer';
 export type { LoadJsonParams } from './use-cases/load-json';

@@ -4,6 +4,7 @@ import type { LayerType } from '../../types-core';
 export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType }, workspace: string) => {
   const hasBuildingIdColumn = !!layerTable.columns?.some((c) => c.name === 'building_id');
   const qualifiedTableName = `${workspace}.${layerTable.name}`;
+  const propertiesExpression = buildPropertiesExpression(layerTable);
 
   if (layerTable.type === 'raster') {
     return `
@@ -26,10 +27,6 @@ export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType
   }
 
   if (layerTable.type === 'buildings' && hasBuildingIdColumn) {
-    // Aggregate building parts into one feature per building.
-    // Geometry becomes a GeometryCollection of all part polygons (one per part).
-    // Properties contain a 'parts' array with per-part OSM properties (heights, tags, etc.)
-    // aligned by index with geometry.geometries, plus shared/join properties at the top level.
     return `
       SELECT json_object(
            'type', 'FeatureCollection',
@@ -56,8 +53,6 @@ export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType
   }
 
   if (layerTable.type === 'buildings') {
-    // Fallback for buildings without building_id — wrap each row in a single-part GeometryCollection.
-    // This path should rarely be hit since building_id is auto-assigned on load.
     return `
       SELECT json_object(
            'type', 'FeatureCollection',
@@ -67,7 +62,7 @@ export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType
         SELECT json_object(
           'type', 'Feature',
           'geometry', json_object('type', 'GeometryCollection', 'geometries', json_array(CAST(ST_AsGeoJSON(geometry) AS JSON))),
-          'properties', properties
+          'properties', ${propertiesExpression}
         ) AS feature
         FROM ${qualifiedTableName}
       ) sub;
@@ -83,9 +78,32 @@ export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType
     SELECT json_object(
             'type', 'Feature',
             'geometry', CAST(ST_AsGeoJSON(geometry) AS JSON),
-            'properties', properties
+            'properties', ${propertiesExpression}
           ) AS feature
     FROM ${qualifiedTableName}
     ) sub;
 `;
 };
+
+function buildPropertiesExpression(layerTable: Table & { type: LayerType }): string {
+  if (hasPropertiesColumn(layerTable)) {
+    return `COALESCE(CAST(properties AS JSON), '{}'::JSON)`;
+  }
+
+  const propertyColumns = layerTable.columns.filter((column) => column.type !== 'GEOMETRY');
+  if (propertyColumns.length === 0) {
+    return `'{}'::JSON`;
+  }
+
+  return `json_object(${propertyColumns
+    .map((column) => `'${column.name.replace(/'/g, "''")}', ${quoteIdentifier(column.name)}`)
+    .join(', ')})`;
+}
+
+function hasPropertiesColumn(table: Table): boolean {
+  return table.columns.some((column) => column.name === 'properties');
+}
+
+function quoteIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}

@@ -24,7 +24,7 @@ export const DEFAULT_WORKSPACE_COORDINATE_FORMAT = 'EPSG:3395';
  *
  * Provides a stable column name for internal SQL and downstream consumers.
  */
-export const DEFAULT_GEO_COLUMN_NAME = 'geoPoint';
+export const DEFAULT_GEO_COLUMN_NAME = 'geometry';
 
 /**
  * OSM `leisure` tag values treated as park-like features.
