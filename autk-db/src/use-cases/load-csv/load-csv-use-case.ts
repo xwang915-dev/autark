@@ -7,17 +7,65 @@ import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT, DEFAULT_GEO_COLUMN_NAME } from '../../consts';
 
 /**
- * Loads CSV data into DuckDB, with optional geometry column creation.
+ * Loads CSV content into DuckDB and optionally materializes a geometry column.
+ *
+ * This use case accepts either a remote CSV file or an in-memory matrix, creates the target table, validates geometry creation, and returns the inferred table metadata.
+ *
+ * Geometry imports can be built from default latitude/longitude columns, custom coordinate columns, or a WKT column.
+ *
+ * @throws {Error} Propagates load, validation, and geometry inference failures raised while `exec` runs.
+ * @example
+ * const useCase = new LoadCsvUseCase(db, conn);
+ * const table = await useCase.exec({
+ *   csvFileUrl: 'https://example.com/cities.csv',
+ *   outputTableName: 'cities',
+ *   geometryColumns: true,
+ * });
+ * console.log(table.type); // 'points'
  */
 export class LoadCsvUseCase {
+  /** DuckDB instance used to register and clean up temporary CSV files. */
   private db: AsyncDuckDB;
+  /** Active DuckDB connection used to execute the generated SQL statements. */
   private conn: AsyncDuckDBConnection;
 
+  /**
+   * Binds the CSV loading workflow to a DuckDB database and connection.
+   *
+   * The use case keeps both dependencies so it can register temporary files on the database and run SQL through the connection.
+   *
+   * @param db - DuckDB instance that stores temporary CSV content.
+   * @param conn - DuckDB connection used for table creation, validation, and indexing queries.
+   * @returns A `LoadCsvUseCase` instance ready to execute CSV imports.
+   * @throws {TypeError} Runtime failures can occur later if the provided DuckDB objects do not implement the expected APIs.
+   * @example
+   * const useCase = new LoadCsvUseCase(db, conn);
+   */
   constructor(db: AsyncDuckDB, conn: AsyncDuckDBConnection) {
     this.db = db;
     this.conn = conn;
   }
 
+  /**
+   * Loads a CSV source into a workspace table and returns the resulting table metadata.
+   *
+   * The method fetches or serializes CSV content, creates the DuckDB table, optionally builds geometry, validates that geometry creation succeeded for every row, and adds a spatial index when geometry exists.
+   *
+   * Exactly one of `csvFileUrl` or `csvObject` must be provided.
+   * @param params - CSV source information, output table settings, and optional geometry configuration.
+   * @returns Metadata describing the created CSV-backed table and its inferred layer type.
+   * @throws {Error} If no CSV source is provided, both CSV sources are provided, the remote fetch fails, geometry columns are invalid, geometry creation produces null values, WKT types cannot be inferred, or DuckDB rejects the generated SQL.
+   * @example
+   * const table = await useCase.exec({
+   *   csvObject: [
+   *     ['Latitude', 'Longitude', 'name'],
+   *     [48.8566, 2.3522, 'Paris'],
+   *   ],
+   *   outputTableName: 'cities',
+   *   geometryColumns: true,
+   * });
+   * console.log(table.name); // 'cities'
+   */
   async exec({ csvFileUrl, csvObject, outputTableName, geometryColumns, delimiter = ',', workspace = DEFAULT_WORKSPACE_NAME, workspaceCoordinateFormat = DEFAULT_WORKSPACE_COORDINATE_FORMAT }: LoadCsvParams & { workspaceCoordinateFormat?: string }): Promise<CsvTable> {
     if (!csvFileUrl && !csvObject) {
       throw new Error('Either csvFileUrl or csvObject must be provided');
@@ -137,6 +185,17 @@ export class LoadCsvUseCase {
     }
   }
 
+  /**
+   * Verifies that every imported row received a non-null geometry value.
+   *
+   * This guard catches partial geometry creation failures before the table is returned to callers.
+   *
+   * @param qualifiedTableName - Fully qualified name of the imported table to inspect.
+   * @returns Resolves when the table contains geometry for every row.
+   * @throws {Error} If any row is missing the generated geometry value.
+   * @example
+   * await this.ensureAllRowsHaveGeometry('main.cities');
+   */
   private async ensureAllRowsHaveGeometry(qualifiedTableName: string): Promise<void> {
     const response = await this.conn.query(`
       SELECT COUNT(*) AS total_rows, COUNT(${DEFAULT_GEO_COLUMN_NAME}) AS geometry_rows
@@ -151,6 +210,19 @@ export class LoadCsvUseCase {
     }
   }
 
+  /**
+   * Infers the vector layer family produced by a WKT geometry column.
+   *
+   * The method inspects the created DuckDB geometry column, normalizes geometry type names, and rejects unsupported or mixed geometry families.
+   *
+   * @param qualifiedTableName - Fully qualified name of the imported table that contains the generated geometry column.
+   * @param wktColumnName - Original WKT column name used to build error messages.
+   * @returns The single inferred CSV geometry layer type for the imported table.
+   * @throws {Error} If no non-null geometries were created, if the geometry type is unsupported, or if the table mixes incompatible geometry families.
+   * @example
+   * const type = await this.inferWktLayerType('main.parcels', 'wkt');
+   * console.log(type); // 'polygons'
+   */
   private async inferWktLayerType(qualifiedTableName: string, wktColumnName: string): Promise<CsvGeometryLayerType> {
     const response = await this.conn.query(`
       SELECT DISTINCT CAST(ST_GeometryType(${DEFAULT_GEO_COLUMN_NAME}) AS VARCHAR) AS geometry_type
@@ -191,6 +263,23 @@ export class LoadCsvUseCase {
     return Array.from(inferredLayerTypes)[0];
   }
 
+  /**
+   * Serializes an in-memory CSV matrix into a quoted CSV string.
+   *
+   * Every cell is converted to text, double quotes are escaped, and each value is wrapped in quotes so DuckDB receives a predictable CSV payload.
+   *
+   * @param csvObject - CSV rows to serialize, including the header row.
+   * @param delimiter - Delimiter inserted between serialized values.
+   * @returns A CSV string ready to register as a temporary DuckDB file.
+   * @throws {Error} JavaScript can throw if a row value cannot be stringified by `String`, though ordinary values are handled safely.
+   * @example
+   * const csv = this.buildCsvString([
+   *   ['name', 'value'],
+   *   ['Paris', '"quoted"'],
+   * ], ',');
+   * console.log(csv);
+   * // "name","value"\n"Paris","""quoted"""
+   */
   private buildCsvString(csvObject: unknown[][], delimiter: string): string {
     return csvObject
       .map((row) =>
