@@ -26,15 +26,15 @@ export class LoadJsonUseCase {
       throw new Error('Cannot provide both jsonFileUrl and jsonObject. Please provide only one.');
     }
 
-    let jsonPath = jsonFileUrl as string;
-    let tempFileCreated = false;
+    const jsonString = jsonFileUrl
+      ? await fetch(jsonFileUrl).then((r) => {
+          if (!r.ok) throw new Error(`HTTP error! Error to load ${jsonFileUrl}! Status: ${r.status}`);
+          return r.text();
+        })
+      : JSON.stringify(jsonObject);
 
-    if (jsonObject) {
-      const jsonString = JSON.stringify(jsonObject);
-      jsonPath = `temp_json_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
-      await this.db.registerFileText(jsonPath, jsonString);
-      tempFileCreated = true;
-    }
+    const jsonPath = `temp_json_${Date.now()}_${Math.random().toString(36).slice(2, 11)}.json`;
+    await this.db.registerFileText(jsonPath, jsonString);
 
     const qualifiedTableName = `${workspace}.${outputTableName}`;
     let tableCreated = false;
@@ -135,9 +135,7 @@ export class LoadJsonUseCase {
       }
       throw error;
     } finally {
-      if (tempFileCreated) {
-        await this.db.dropFile(jsonPath);
-      }
+      await this.db.dropFile(jsonPath);
     }
   }
 
