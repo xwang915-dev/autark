@@ -27,7 +27,7 @@ export class OsmLayersApi {
             },
         });
 
-        await this.db.loadCustomLayer({
+        await this.db.loadGeojson({
             geojsonFileUrl: `${URL}data/nit_buildings.geojson`,
             outputTableName: 'lotes',
             layerType: 'buildings'

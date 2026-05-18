@@ -34,11 +34,11 @@ import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatm
 import { GetLayerGeojsonUseCase } from './use-cases/get-layer-geojson';
 import { GetTableDataParams, GetTableDataOutput, GetTableDataUseCase } from './use-cases/get-table-data';
 import { LoadCsvParams, LoadCsvUseCase } from './use-cases/load-csv';
-import { LoadCustomLayerParams, LoadCustomLayerUseCase } from './use-cases/load-custom-layer';
+import { LoadGeojsonParams, LoadGeojsonUseCase } from './use-cases/load-geojson';
 import { LoadGeoTiffParams, LoadGeoTiffUseCase } from './use-cases/load-geotiff';
 import { LoadGridLayerParams, LoadGridLayerUseCase } from './use-cases/load-grid-layer';
 import { LoadJsonParams, LoadJsonUseCase } from './use-cases/load-json';
-import { LoadLayerParams, LoadLayerUseCase } from './use-cases/load-layer';
+import { LoadOsmLayerParams, LoadOsmLayerUseCase } from './use-cases/load-osm-layer';
 import { LoadOsmFromOverpassApiUseCase, LoadOsmParams, OsmLoadTimings } from './use-cases/load-osm-from-overpass-api';
 import { LoadOsmFromPbfUseCase } from './use-cases/load-osm-from-pbf';
 import { OsmProcessingPipeline } from './internal/osm-processing-pipeline/osm-processing-pipeline';
@@ -87,10 +87,10 @@ export class AutkDb {
     private loadCsvUseCase?: LoadCsvUseCase;
 
     /** OSM layer extraction use case bound to the active database connection. */
-    private loadLayerUseCase?: LoadLayerUseCase;
+    private loadOsmLayerUseCase?: LoadOsmLayerUseCase;
 
-    /** Custom GeoJSON layer loading use case bound to the active database connection. */
-    private loadCustomLayerUseCase?: LoadCustomLayerUseCase;
+    /** GeoJSON layer loading use case bound to the active database connection. */
+    private loadGeojsonUseCase?: LoadGeojsonUseCase;
 
     /** Building identifier assignment use case for grouped building outputs. */
     private assignBuildingIdsUseCase?: AssignBuildingIdsUseCase;
@@ -184,8 +184,8 @@ export class AutkDb {
 
         this.loadCsvUseCase = new LoadCsvUseCase(this.db, this.conn);
         this.loadJsonUseCase = new LoadJsonUseCase(this.db, this.conn);
-        this.loadLayerUseCase = new LoadLayerUseCase(this.db, this.conn);
-        this.loadCustomLayerUseCase = new LoadCustomLayerUseCase(this.db, this.conn);
+        this.loadOsmLayerUseCase = new LoadOsmLayerUseCase(this.db, this.conn);
+        this.loadGeojsonUseCase = new LoadGeojsonUseCase(this.db, this.conn);
         this.loadGridLayerUseCase = new LoadGridLayerUseCase(this.conn);
         this.loadGeoTiffUseCase = new LoadGeoTiffUseCase(this.db, this.conn);
 
@@ -338,7 +338,7 @@ export class AutkDb {
             for (const layer of params.autoLoadLayers.layers) {
                 const shouldCropToBbox = layer !== 'buildings';
 
-                const layerParams: LoadLayerParams = {
+                const layerParams: LoadOsmLayerParams = {
                     osmInputTableName: params.outputTableName,
                     coordinateFormat: sourceCrs,
                     layer,
@@ -347,7 +347,7 @@ export class AutkDb {
                 layerParams.boundingBox = shouldCropToBbox ? workspaceData.osmBoundingBox : undefined;
 
                 const t0 = performance.now();
-                const layerTable = await this.loadLayer({ ...layerParams, workspaceCoordinateFormat: targetCrs });
+                const layerTable = await this.loadOsmLayer({ ...layerParams, workspaceCoordinateFormat: targetCrs });
                 const loadMs = performance.now() - t0;
 
                 const countResult = await this.conn.query(
@@ -457,13 +457,13 @@ export class AutkDb {
      * @returns The created layer table metadata.
      * @throws If the database is not initialized, the OSM table is missing, or the table is not a raw OSM table.
      * @example
-     * const buildings = await db.loadLayer({
+     * const buildings = await db.loadOsmLayer({
      *   osmInputTableName: 'manhattan',
      *   layer: 'buildings',
      * });
      */
-    async loadLayer(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
-        if (!this.db || !this.conn || !this.loadLayerUseCase)
+    async loadOsmLayer(params: LoadOsmLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
+        if (!this.db || !this.conn || !this.loadOsmLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
         const osmTable = this.tables.find((t) => t.name === params.osmInputTableName);
@@ -472,7 +472,7 @@ export class AutkDb {
             throw new Error(`Table ${params.osmInputTableName} is not a raw OSM table.`);
 
         const workspaceData = this.getCurrentWorkspaceData();
-        const table = await this.loadLayerUseCase.exec({
+        const table = await this.loadOsmLayerUseCase.exec({
             ...params,
             workspace: this.currentWorkspace,
             workspaceCoordinateFormat: params.workspaceCoordinateFormat ?? workspaceData.coordinateFormat,
@@ -491,24 +491,24 @@ export class AutkDb {
      * @returns The created custom layer table metadata.
      * @throws If the database is not initialized, or the GeoJSON is not a FeatureCollection.
      * @example
-     * const neighborhoods = await db.loadCustomLayer({
+     * const neighborhoods = await db.loadGeojson({
      *   geojsonFileUrl: '/data/neighborhoods.geojson',
      *   outputTableName: 'neighborhoods',
      *   layerType: 'parks',
      * });
      */
-    async loadCustomLayer(params: LoadCustomLayerParams): Promise<GeojsonTable> {
+    async loadGeojson(params: LoadGeojsonParams): Promise<GeojsonTable> {
         if (
             !this.db ||
             !this.conn ||
-            !this.loadCustomLayerUseCase ||
+            !this.loadGeojsonUseCase ||
             !this.assignBuildingIdsUseCase ||
             !this.getBoundingBoxFromLayerUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
 
         const workspaceData = this.getCurrentWorkspaceData();
-        const table = await this.loadCustomLayerUseCase.exec({
+        const table = await this.loadGeojsonUseCase.exec({
             ...params,
             boundingBox: workspaceData.osmBoundingBox,
             workspace: this.currentWorkspace,

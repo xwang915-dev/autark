@@ -1,7 +1,7 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import type { Geometry, MultiPolygon, Polygon, Position } from 'geojson';
 
-import { LoadLayerParams } from './interfaces';
+import { LoadOsmLayerParams } from './interfaces';
 import { LOAD_LAYER_QUERY } from './queries';
 import type { BoundingBox, LayerType } from '../../types-core';
 import { OsmLayerTable } from '../../interfaces';
@@ -44,7 +44,7 @@ type RelationAreaRecord = {
 /**
  * Extracts a thematic layer (roads, buildings, parks, water, surface) from raw OSM data.
  */
-export class LoadLayerUseCase {
+export class LoadOsmLayerUseCase {
   private db: AsyncDuckDB;
   private conn: AsyncDuckDBConnection;
   private assignBuildingIdsUseCase: AssignBuildingIdsUseCase;
@@ -57,7 +57,7 @@ export class LoadLayerUseCase {
     this.aggregateBuildingLayerUseCase = new AggregateBuildingLayerUseCase(conn);
   }
 
-  async exec(params: LoadLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
+  async exec(params: LoadOsmLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
     const sourceCrs = params.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT;
     const targetCrs = params.workspaceCoordinateFormat || DEFAULT_WORKSPACE_COORDINATE_FORMAT;
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
@@ -97,7 +97,7 @@ export class LoadLayerUseCase {
     }
 
     if (totalSkippedRelations > 0) {
-      console.warn(`[LoadLayerUseCase] loaded ${params.layer}: ${totalSkippedRelations} relations skipped.`);
+      console.warn(`[LoadOsmLayerUseCase] loaded ${params.layer}: ${totalSkippedRelations} relations skipped.`);
     }
 
     if (config.postProcessing === 'building-aggregation') {

@@ -11,7 +11,7 @@ export class ColormapDiv {
         this.db = new AutkDb();
         await this.db.init();
 
-        await this.db.loadCustomLayer({
+        await this.db.loadGeojson({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
         });

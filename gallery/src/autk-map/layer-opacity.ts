@@ -25,7 +25,7 @@ export class LayerOpacity {
             },
         });
 
-        await this.db.loadCustomLayer({
+        await this.db.loadGeojson({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
         });

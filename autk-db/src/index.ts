@@ -47,7 +47,7 @@ export {
   isRasterTable,
 } from './interfaces';
 
-export type { Layer, LoadLayerParams } from './use-cases/load-layer';
+export type { Layer, LoadOsmLayerParams } from './use-cases/load-osm-layer';
 export type { LoadGeoTiffParams } from './use-cases/load-geotiff';
 export type { GetTableDataParams, GetTableDataOutput } from './use-cases/get-table-data';
 export type {
@@ -57,7 +57,7 @@ export type {
   LayerLoadTimings,
   LoadOsmParams,
 } from './use-cases/load-osm-from-overpass-api';
-export type { SpatialQueryParams, AggregateFunction } from './use-cases/spatial-join';
+export type { SpatialQueryParams, AggregateFunction, NearConfig } from './use-cases/spatial-join';
 export type { BuildHeatmapParams, HeatmapAggregateFunction } from './use-cases/build-heatmap';
 export type {
   CsvDefaultLatLngGeometryColumns,
@@ -67,7 +67,7 @@ export type {
   CsvGeometryLayerType,
   LoadCsvParams,
 } from './use-cases/load-csv';
-export type { LoadCustomLayerParams } from './use-cases/load-custom-layer';
+export type { LoadGeojsonParams } from './use-cases/load-geojson';
 export type { LoadGridLayerParams } from './use-cases/load-grid-layer';
 export type {
   JsonDefaultLatLngGeometryColumns,

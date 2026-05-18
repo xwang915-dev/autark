@@ -89,7 +89,7 @@ export class Urbane {
         });
 
         setLoadingState('Loading neighborhood dataset...', 'Importing Manhattan neighborhood boundaries.');
-        await this.db.loadCustomLayer({
+        await this.db.loadGeojson({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
         });

@@ -2,7 +2,7 @@ import type { LayerType, BoundingBox } from '../../types-core';
 
 export type { LayerType };
 
-export interface LoadLayerParams {
+export interface LoadOsmLayerParams {
   osmInputTableName: string;
   outputTableName?: string;
   layer: LayerType;

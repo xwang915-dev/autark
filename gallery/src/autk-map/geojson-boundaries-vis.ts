@@ -14,7 +14,7 @@ export class GeojsonPolygonsVis {
         const response = await fetch(`${URL}data/mnt_neighs.geojson`);
         const data = await response.json();
 
-        await this.db.loadCustomLayer({
+        await this.db.loadGeojson({
             geojsonObject: data,
             outputTableName: 'neighborhoods',
         });

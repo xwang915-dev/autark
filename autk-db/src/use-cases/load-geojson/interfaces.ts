@@ -1,7 +1,7 @@
 import { FeatureCollection } from 'geojson';
 import type { BoundingBox, LayerType } from '../../types-core';
 
-export interface LoadCustomLayerParams {
+export interface LoadGeojsonParams {
   geojsonFileUrl?: string;
   geojsonObject?: FeatureCollection;
   outputTableName: string;

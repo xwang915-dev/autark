@@ -30,7 +30,7 @@ export class MapD3TemporalEvents {
         this.db = new AutkDb();
         await this.db.init();
 
-        await this.db.loadCustomLayer({
+        await this.db.loadGeojson({
             geojsonFileUrl: `${URL}data/mnt_roads.geojson`,
             outputTableName: 'roads',
             coordinateFormat: 'EPSG:3395'

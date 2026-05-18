@@ -1,6 +1,6 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { GeojsonTable } from '../../interfaces';
-import { LoadCustomLayerParams } from './interfaces';
+import { LoadGeojsonParams } from './interfaces';
 import { DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../consts';
 import { LOAD_FEATURE_COLLECTION_QUERY, LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
@@ -11,7 +11,7 @@ import { mapGeometryTypeToLayerType } from '../../types-core';
 /**
  * Loads a GeoJSON FeatureCollection as a spatial layer table.
  */
-export class LoadCustomLayerUseCase {
+export class LoadGeojsonUseCase {
   private db: AsyncDuckDB;
   private conn: AsyncDuckDBConnection;
 
@@ -29,7 +29,7 @@ export class LoadCustomLayerUseCase {
     workspace = DEFAULT_WORKSPACE_NAME,
     layerType,
     workspaceCoordinateFormat = DEFAULT_WORKSPACE_COORDINATE_FORMAT,
-  }: LoadCustomLayerParams & { workspaceCoordinateFormat?: string }): Promise<GeojsonTable> {
+  }: LoadGeojsonParams & { workspaceCoordinateFormat?: string }): Promise<GeojsonTable> {
     if (!geojsonFileUrl && !geojsonObject) {
       throw new Error('Either geojsonFileUrl or geojsonObject must be provided');
     }

@@ -5,7 +5,7 @@ import { polygonize } from '@turf/turf';
 import { PolygonizeSurfaceLayerParams } from './interfaces';
 import { OsmLayerTable } from '../../interfaces';
 import { GetLayerGeojsonUseCase } from '../../use-cases/get-layer-geojson';
-import { LOAD_FEATURE_COLLECTION_QUERY } from '../../use-cases/load-custom-layer/queries';
+import { LOAD_FEATURE_COLLECTION_QUERY } from '../../use-cases/load-geojson/queries';
 import { LOAD_POLYGONIZED_LAYER_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';

@@ -7,5 +7,5 @@
  * @module spatial-join
  */
 export { SpatialJoinUseCase } from './spatial-join-use-case';
-export type { SpatialQueryParams, AggregateFunction } from './interfaces';
+export type { SpatialQueryParams, AggregateFunction, NearConfig } from './interfaces';
 export * from './errors';
