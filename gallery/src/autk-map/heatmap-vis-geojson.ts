@@ -29,7 +29,7 @@ export class Heatmap {
 
         await this.db.buildHeatmap({
             tableJoinName: 'noise',
-            nearDistance: 1000,
+            near: { distance: 1000 },
             outputTableName: 'heatmap',
             grid: {
                 rows: 30,

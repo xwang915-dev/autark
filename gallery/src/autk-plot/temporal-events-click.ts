@@ -50,7 +50,7 @@ export class MapD3TemporalEvents {
             tableRootName: 'roads',
             tableJoinName: 'noise',
             spatialPredicate: 'NEAR',
-            nearDistance: 200,
+            near: { distance: 200 },
             groupBy: {
                 selectColumns: [
                     {

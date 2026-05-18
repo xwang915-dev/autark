@@ -398,8 +398,7 @@ export class Urbane {
                 tableRootName: 'active_buildings',
                 tableJoinName: dataset,
                 spatialPredicate: 'NEAR',
-                nearDistance: this.distance,
-                nearUseCentroid: true,
+                near: { distance: this.distance, useCentroid: true },
                 groupBy: {
                     selectColumns: [{
                         column: 'key',
@@ -414,8 +413,7 @@ export class Urbane {
             tableRootName: 'active_buildings',
             tableJoinName: 'table_osm_roads',
             spatialPredicate: 'NEAR',
-            nearDistance: 300,
-            nearUseCentroid: true,
+            near: { distance: 300, useCentroid: true },
             groupBy: {
                 selectColumns: [{
                     column: 'compute.skyViewFactor',

@@ -843,7 +843,7 @@ export class AutkDb {
      *   tableRootName: 'roads',
      *   tableJoinName: 'lst',
      *   spatialPredicate: 'NEAR',
-     *   nearDistance: 1000,
+     *   near: { distance: 1000 },
      * });
      */
     async spatialQuery(params: SpatialQueryParams): Promise<Table> {

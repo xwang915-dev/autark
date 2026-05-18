@@ -48,7 +48,7 @@ export class BuildHeatmapUseCase {
                 tableRootName: gridTableName,
                 tableJoinName: params.tableJoinName,
                 spatialPredicate: 'NEAR',
-                nearDistance: params.nearDistance,
+                near: { distance: params.near.distance },
                 groupBy: params.groupBy,
             },
             [...tables, gridTable],

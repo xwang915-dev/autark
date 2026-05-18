@@ -32,8 +32,8 @@ export class SpatialJoinUseCase {
 
     const spatialPredicate = params.spatialPredicate || 'INTERSECT';
 
-    let nearUseCentroid = params.nearUseCentroid;
-    if (nearUseCentroid === undefined && spatialPredicate === 'NEAR') {
+    let nearUseCentroid = params.near?.useCentroid ?? true;
+    if (spatialPredicate === 'NEAR' && nearUseCentroid === undefined) {
       nearUseCentroid = await this.isPolygonTable(tableRoot.name, geometricColumnRoot, workspace);
     }
 
@@ -46,7 +46,7 @@ export class SpatialJoinUseCase {
       geometricColumnJoin,
       spatialPredicate,
       groupBy: params.groupBy ? { selectColumns: params.groupBy.selectColumns } : null,
-      nearDistance: params.nearDistance,
+      nearDistance: params.near?.distance,
       nearUseCentroid,
     });
 

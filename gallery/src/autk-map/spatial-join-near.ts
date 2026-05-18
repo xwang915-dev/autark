@@ -39,7 +39,7 @@ export class SpatialJoinNear {
             tableRootName: 'table_osm_roads',
             tableJoinName: 'noise',
             spatialPredicate: 'NEAR',
-            nearDistance: 1000,
+            near: { distance: 1000 },
             groupBy: {
                 selectColumns: [
                     {

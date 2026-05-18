@@ -1,5 +1,13 @@
 export type AggregateFunction ='sum' | 'avg' | 'count' | 'min' | 'max' | 'weighted' | 'collect';
 
+/** Configuration for the NEAR spatial predicate. */
+export interface NearConfig {
+  /** Maximum search distance. */
+  distance: number;
+  /** When `true`, uses centroid-to-centroid distance. Defaults to `true`. */
+  useCentroid?: boolean;
+}
+
 /**
  * Parameters for a spatial join between two tables.
  *
@@ -13,10 +21,8 @@ export interface SpatialQueryParams {
   tableJoinName: string;
   /** Spatial predicate to use. Defaults to `'INTERSECT'`. */
   spatialPredicate?: 'INTERSECT' | 'NEAR';
-  /** Maximum distance for the `'NEAR'` predicate. */
-  nearDistance?: number;
-  /** When `true`, uses centroid-to-centroid distance. Defaults to `true` when the root table contains polygons. */
-  nearUseCentroid?: boolean;
+  /** NEAR predicate configuration. Required when `spatialPredicate` is `'NEAR'`. */
+  near?: NearConfig;
   /** Optional aggregation applied to join-side data. Keys are derived from `tableJoinName` and the aggregate function. */
   groupBy?: {
     selectColumns: Array<{

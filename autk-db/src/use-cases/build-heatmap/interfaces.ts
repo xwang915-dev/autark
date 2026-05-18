@@ -2,7 +2,8 @@ export type HeatmapAggregateFunction = 'sum' | 'avg' | 'count' | 'min' | 'max' |
 
 export interface BuildHeatmapParams {
     tableJoinName: string;
-    nearDistance: number;
+    /** NEAR predicate configuration for heatmap generation. */
+    near: { distance: number };
     outputTableName: string;
     groupBy?: {
         selectColumns: Array<{

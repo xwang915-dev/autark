@@ -54,7 +54,7 @@ export class OsmLayersApi {
             tableRootName: 'table_osm_roads',
             tableJoinName: 'lst',
             spatialPredicate: 'NEAR',
-            nearDistance: 1000,
+            near: { distance: 1000 },
             groupBy: {
                 selectColumns: Array.from({ length: BAND_COUNT }, (_, i) => ({
                     column: `band_${i + 1}`,

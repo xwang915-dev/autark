@@ -228,7 +228,7 @@ export class Shadows {
                 tableRootName: this.ROADS_LAYER,
                 tableJoinName: 'shadows',
                 spatialPredicate: 'NEAR',
-                nearDistance: 200,
+                near: { distance: 200 },
                 groupBy: {
                     selectColumns: [{
                         column: month,

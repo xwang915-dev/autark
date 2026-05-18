@@ -38,7 +38,7 @@ export class SpatialJoinNear {
             tableRootName: layer,
             tableJoinName: 'noise',
             spatialPredicate: 'NEAR',
-            nearDistance: 1000,
+            near: { distance: 1000 },
             groupBy: {
                 selectColumns: [
                     {
