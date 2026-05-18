@@ -9,14 +9,42 @@ import { getColumnsFromDuckDbTableDescribe } from '../../utils';
  * Performs a spatial join between two tables, with optional aggregation.
  *
  * The join always modifies the root table in place using a LEFT join.
+ *
+ * @note Requires an active `AsyncDuckDBConnection`.
  */
 export class SpatialJoinUseCase {
+  /** DuckDB connection used to execute SQL queries. */
   private conn: AsyncDuckDBConnection;
 
+  /**
+   * Creates a new instance bound to the given DuckDB connection.
+   *
+   * @param conn - Open connection used to execute SQL queries.
+   */
   constructor(conn: AsyncDuckDBConnection) {
     this.conn = conn;
   }
 
+  /**
+   * Executes a spatial join between the root and join tables, modifying the root table in place.
+   *
+   * Uses `'INTERSECT'` by default, or `'NEAR'` when `near` config is provided. The root table receives merged properties under `properties.sjoin`.
+   *
+   * @param params - configuration including table names, optional `near` distance, and optional `groupBy` aggregation.
+   * @param tables - list of available tables used to resolve table metadata.
+   * @param workspace - workspace namespace qualifying the table names.
+   * @returns the updated root table with refreshed column metadata.
+   * @throws {TableNotFoundError} If either the root or join table does not exist.
+   * @throws {GeometryColumnNotFoundError} If either table lacks a geometry column.
+   * @example
+   * const useCase = new SpatialJoinUseCase(conn);
+   * const table = await useCase.exec(
+   *   { tableRootName: 'roads', tableJoinName: 'noise', near: { distance: 1000 } },
+   *   tables,
+   *   'main',
+   * );
+   * console.log(table.name); // 'roads'
+   */
   async exec(params: SpatialQueryParams, tables: Table[], workspace: string): Promise<Table> {
     const tableRoot = tables.find((table) => table.name === params.tableRootName);
     if (!tableRoot) throw new TableNotFoundError(params.tableRootName);
@@ -67,12 +95,15 @@ export class SpatialJoinUseCase {
   }
 
   /**
-   * Determines whether the table stores polygon geometries.
+   * Checks whether the first non-null geometry in the table is a polygon type.
+   *
+   * Used to decide whether centroid-based distance calculations are appropriate for NEAR joins.
    *
    * @param tableName - name of the table to inspect.
-   * @param geomColumn - name of the geometry column.
+   * @param geomColumn - name of the geometry column to query.
    * @param workspace - workspace namespace qualifying the table name.
-   * @returns `true` if the table contains polygon or multipolygon geometry.
+   * @returns `true` if the table contains `POLYGON` or `MULTIPOLYGON` geometry.
+   * @throws {Error} If the SQL query fails.
    */
   private async isPolygonTable(tableName: string, geomColumn: string, workspace: string): Promise<boolean> {
     const qualifiedTableName = `${workspace}.${tableName}`;
@@ -88,10 +119,11 @@ export class SpatialJoinUseCase {
   /**
    * Returns the geometry column name for a table.
    *
-   * For building tables, prioritizes `agg_geometry` if available, otherwise falls back to `geometry`.
+   * For building tables, prioritizes `agg_geometry` if available, otherwise falls back to the first `GEOMETRY` column.
    *
    * @param table - table metadata to inspect.
    * @returns the geometry column name, or `undefined` if none found.
+   * @throws Never throws — returns `undefined` when no geometry column exists.
    */
   private getGeometryColumnName(table: Table): string | undefined {
     if (table.source === 'osm' && table.type === 'buildings') {
