@@ -1,30 +1,6 @@
 import { DEFAULT_GEO_COLUMN_NAME } from '../../consts';
 
 /**
- * Builds a DuckDB SQL query to load a JSON file into a table without geometry.
- *
- * Uses `read_json_auto` to infer the schema and create the table in one step.
- *
- * @param jsonFileUrl - virtual file path registered in DuckDB's in-memory filesystem.
- * @param tableName - unqualified name of the table to create.
- * @param workspace - workspace namespace that qualifies the table name.
- * @returns SQL string that creates the table and describes its columns.
- * @throws No runtime errors — returns a pure SQL string.
- * @example
- * const sql = LOAD_JSON_ON_TABLE_QUERY('data.json', 'places', 'main');
- * // Creates table main.places and describes its schema.
- */
-export const LOAD_JSON_ON_TABLE_QUERY = (jsonFileUrl: string, tableName: string, workspace: string) => {
-  const qualifiedTableName = `${workspace}.${tableName}`;
-  return `
-        CREATE OR REPLACE TABLE ${qualifiedTableName} AS
-            SELECT * FROM read_json_auto('${jsonFileUrl}');
-
-        DESCRIBE ${qualifiedTableName};
-  `;
-};
-
-/**
  * Parameters for building a SQL query that creates geometry from lat/lng columns.
  */
 interface LoadJsonOnTableWithCoordinatesParams {
@@ -48,6 +24,30 @@ interface LoadJsonOnTableWithWktParams {
   targetCrs: string;
   workspace: string;
 }
+
+/**
+ * Builds a DuckDB SQL query to load a JSON file into a table without geometry.
+ *
+ * Uses `read_json_auto` to infer the schema and create the table in one step.
+ *
+ * @param jsonFileUrl - virtual file path registered in DuckDB's in-memory filesystem.
+ * @param tableName - unqualified name of the table to create.
+ * @param workspace - workspace namespace that qualifies the table name.
+ * @returns SQL string that creates the table and describes its columns.
+ * @throws No runtime errors — returns a pure SQL string.
+ * @example
+ * const sql = LOAD_JSON_ON_TABLE_QUERY('data.json', 'places', 'main');
+ * // Creates table main.places and describes its schema.
+ */
+export const LOAD_JSON_ON_TABLE_QUERY = (jsonFileUrl: string, tableName: string, workspace: string) => {
+  const qualifiedTableName = `${workspace}.${tableName}`;
+  return `
+        CREATE OR REPLACE TABLE ${qualifiedTableName} AS
+            SELECT * FROM read_json_auto('${jsonFileUrl}');
+
+        DESCRIBE ${qualifiedTableName};
+  `;
+};
 
 /**
  * Builds a DuckDB SQL query to load JSON data and create point geometry from lat/lng columns.

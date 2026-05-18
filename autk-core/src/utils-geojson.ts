@@ -19,6 +19,27 @@ import { booleanIntersects, bbox as turfBbox } from '@turf/turf';
 import RBush from 'rbush';
 
 /**
+ * Type guard that checks whether a value is a GeoJSON FeatureCollection.
+ *
+ * @param data - value to test.
+ * @returns `true` if the value has `type: 'FeatureCollection'` and a `features` array.
+ * @throws Never throws.
+ * @example
+ * isFeatureCollection({ type: 'FeatureCollection', features: [] }); // true
+ * isFeatureCollection([{ name: 'x' }]); // false
+ */
+export function isFeatureCollection(data: unknown): data is FeatureCollection {
+    return (
+        typeof data === 'object' &&
+        data !== null &&
+        'type' in data &&
+        (data as FeatureCollection).type === 'FeatureCollection' &&
+        'features' in data &&
+        Array.isArray((data as FeatureCollection).features)
+    );
+}
+
+/**
  * Computes a spatial origin from a feature collection's bounding-box center.
  *
  * @param geojson - Feature collection to summarize.

@@ -1,5 +1,6 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { FeatureCollection } from 'geojson';
+import { isFeatureCollection } from 'autk-core';
 
 import { isVectorTable, Table } from '../../interfaces';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
@@ -60,61 +61,34 @@ export class UpdateTableUseCase {
       throw new Error('idColumn is required when using the update strategy');
     }
 
-    const isLayerTable = this.isLayerTable(existingTable);
+    const isLayer = isVectorTable(existingTable);
 
     if (strategy === 'replace') {
-      return this.executeReplaceStrategy(params, existingTable, isLayerTable, workspace);
+      return this.executeReplaceStrategy(params, existingTable, isLayer, workspace);
     } else {
-      return this.executeUpdateStrategy(params, existingTable, isLayerTable, workspace);
+      return this.executeUpdateStrategy(params, existingTable, isLayer, workspace);
     }
   }
 
-  /**
-   * Checks whether the table is a vector/layer table that stores geometry.
-   *
-   * @param table - table metadata to inspect.
-   * @returns `true` if the table has geometry columns.
-   * @throws No runtime errors — returns a boolean.
-   */
-  private isLayerTable(table: Table): boolean {
-    return isVectorTable(table);
-  }
+  // ─── Private helpers ────────────────────────────────────────────────────
 
   /**
    * Validates that the input data type matches the table structure (GeoJSON for layers, objects for plain tables).
    *
    * @param data - the input data to validate.
-   * @param isLayerTable - whether the target table stores geometry.
+   * @param isLayer - whether the target table stores geometry.
    * @throws {Error} If a layer table receives non-GeoJSON data, or a non-layer table receives a FeatureCollection.
    */
-  private validateDataFormat(data: FeatureCollection | Record<string, unknown>[], isLayerTable: boolean): void {
-    if (isLayerTable) {
-      if (!this.isFeatureCollection(data)) {
+  private validateDataFormat(data: FeatureCollection | Record<string, unknown>[], isLayer: boolean): void {
+    if (isLayer) {
+      if (!isFeatureCollection(data)) {
         throw new Error('Layer tables require a GeoJSON FeatureCollection as input data');
       }
     } else {
-      if (this.isFeatureCollection(data)) {
+      if (isFeatureCollection(data)) {
         throw new Error('Non-layer tables (CSV/JSON) require an array of objects as input data');
       }
     }
-  }
-
-  /**
-   * Type guard that checks whether a value is a GeoJSON FeatureCollection.
-   *
-   * @param data - value to test.
-   * @returns `true` if the value has `type: 'FeatureCollection'` and a `features` array.
-   * @throws No runtime errors — returns a boolean.
-   */
-  private isFeatureCollection(data: unknown): data is FeatureCollection {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'type' in data &&
-      (data as FeatureCollection).type === 'FeatureCollection' &&
-      'features' in data &&
-      Array.isArray((data as FeatureCollection).features)
-    );
   }
 
   /**
@@ -151,7 +125,7 @@ export class UpdateTableUseCase {
    *
    * @param params - configuration with table name and new data.
    * @param existingTable - current table metadata used to produce the updated result.
-   * @param isLayerTable - whether the target table stores geometry.
+   * @param isLayer - whether the target table stores geometry.
    * @param workspace - workspace namespace qualifying the table name.
    * @returns the updated table metadata and its refreshed column list.
    * @throws {Error} If the data format is invalid or the table creation query fails.
@@ -159,18 +133,18 @@ export class UpdateTableUseCase {
   private async executeReplaceStrategy(
     params: UpdateTableParams,
     existingTable: Table,
-    isLayerTable: boolean,
+    isLayer: boolean,
     workspace: string,
   ): Promise<UpdateTableResult> {
     const { tableName, data } = params;
 
-    this.validateDataFormat(data, isLayerTable);
+    this.validateDataFormat(data, isLayer);
 
     const tempFileName = await this.createTempFile(data);
 
     try {
       let query: string;
-      if (isLayerTable) {
+      if (isLayer) {
         query = REPLACE_LAYER_TABLE_QUERY(tempFileName, tableName, workspace);
       } else {
         query = REPLACE_DATA_TABLE_QUERY(tempFileName, tableName, workspace);
@@ -200,7 +174,7 @@ export class UpdateTableUseCase {
    *
    * @param params - configuration with table name, new data, and the `idColumn` for matching.
    * @param existingTable - current table metadata used to produce the updated result.
-   * @param isLayerTable - whether the target table stores geometry.
+   * @param isLayer - whether the target table stores geometry.
    * @param workspace - workspace namespace qualifying the table name.
    * @returns the updated table metadata and its refreshed column list.
    * @throws {Error} If the data format is invalid, if any staging/merge SQL query fails, or if cleanup fails unexpectedly.
@@ -208,12 +182,12 @@ export class UpdateTableUseCase {
   private async executeUpdateStrategy(
     params: UpdateTableParams,
     existingTable: Table,
-    isLayerTable: boolean,
+    isLayer: boolean,
     workspace: string,
   ): Promise<UpdateTableResult> {
     const { tableName, data, idColumn } = params;
 
-    this.validateDataFormat(data, isLayerTable);
+    this.validateDataFormat(data, isLayer);
 
     const { sqlExpression } = parseIdColumn(idColumn!);
     const stagingTableName = `_staging_${tableName}_${Date.now()}`;
@@ -222,14 +196,14 @@ export class UpdateTableUseCase {
     try {
       // 1. Create staging table with transformed data
       let createStagingQuery: string;
-      if (isLayerTable) {
+      if (isLayer) {
         createStagingQuery = CREATE_LAYER_STAGING_TABLE_QUERY(tempFileName, stagingTableName);
       } else {
         createStagingQuery = CREATE_DATA_STAGING_TABLE_QUERY(tempFileName, stagingTableName);
       }
       await this.conn.query(createStagingQuery);
 
-      if (isLayerTable) {
+      if (isLayer) {
         // For layer tables: UPDATE existing records only
         // We can't INSERT new records because OSM layers require columns (id, refs)
         // that we don't have in the GeoJSON data
@@ -237,7 +211,7 @@ export class UpdateTableUseCase {
         await this.conn.query(updateQuery);
       } else {
         // For non-layer tables: DELETE + INSERT (full row replacement)
-        
+
         // 2. Delete matching records from target table
         const deleteQuery = DELETE_MATCHING_IDS_QUERY(tableName, stagingTableName, sqlExpression, workspace);
         await this.conn.query(deleteQuery);
