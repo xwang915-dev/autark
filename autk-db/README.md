@@ -36,7 +36,7 @@ import { AutkDb } from '@urban-toolkit/autk-db';
 const db = new AutkDb();
 await db.init();
 
-await db.loadCustomLayer({
+await db.loadGeojson({
   outputTableName: 'buildings',
   geojsonObject: buildingsGeojson,
   layerType: 'buildings',
@@ -74,8 +74,8 @@ console.log(parcels.type); // 'polygons'
 * `setWorkspace(name)`, `getWorkspaces()`, `getCurrentWorkspace()`: Manage isolated database schemas.
 * `loadOsm(params)`: Loads OpenStreetMap data from Overpass API or PBF-backed workflows.
 * `loadCsv(params)`, `loadJson(params)`: Imports tabular or JSON data.
-* `loadLayer(params)`: Extracts standard urban layers from loaded OSM data.
-* `loadCustomLayer(params)`, `loadGridLayer(params)`: Imports custom GeoJSON and generated grid layers.
+* `loadOsmLayer(params)`: Extracts standard urban layers from loaded OSM data.
+* `loadGeojson(params)`, `loadGridLayer(params)`: Imports custom GeoJSON and generated grid layers.
 * `loadGeoTiff(params)`, `getGeoTiffLayer(tableName)`: Imports and exports GeoTIFF-derived raster layers.
 * `getLayer(layerTableName)`: Exports a layer table as a GeoJSON `FeatureCollection`.
 * `getBoundingBoxFromLayer(layerName)`: Computes a layer bounding box.
