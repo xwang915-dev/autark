@@ -7,17 +7,42 @@ import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { DEFAULT_GEO_COLUMN_NAME, DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../consts';
 
 /**
- * Loads JSON data into DuckDB, with optional geometry column creation.
+ * Loads JSON data into a DuckDB table, optionally creating a spatial geometry column.
+ *
+ * Accepts data from a remote URL or an in-memory array. When `geometryColumns` is provided, point or WKT-based geometry is constructed, validated, and indexed with an R-tree.
+ *
+ * @note Requires an active `AsyncDuckDB` instance and connection.
  */
 export class LoadJsonUseCase {
   private db: AsyncDuckDB;
   private conn: AsyncDuckDBConnection;
 
+  /**
+   * Creates a new instance bound to the given DuckDB connection.
+   *
+   * @param db - DuckDB instance used for file registration and cleanup.
+   * @param conn - Open connection used to execute SQL queries.
+   */
   constructor(db: AsyncDuckDB, conn: AsyncDuckDBConnection) {
     this.db = db;
     this.conn = conn;
   }
 
+  /**
+   * Fetches or serializes JSON data, loads it into DuckDB, and optionally creates and indexes a geometry column.
+   *
+   * @note Exactly one of `jsonFileUrl` or `jsonObject` must be provided.
+   * @param params - configuration including data source, output table name, and optional geometry strategy.
+   * @returns metadata describing the created table: source, name, columns, and geometry type.
+   * @throws {Error} If neither or both data sources are provided, if required geometry column names are empty, if null geometries are produced, if WKT contains unsupported or mixed geometry types, or if the HTTP fetch fails.
+   * @example
+   * const useCase = new LoadJsonUseCase(db, conn);
+   * const table = await useCase.exec({ jsonFileUrl: 'https://example.com/data.json', outputTableName: 'places' });
+   * console.log(table.type); // undefined (no geometry)
+   * @example
+   * const table = await useCase.exec({ jsonObject: data, outputTableName: 'stops', geometryColumns: true });
+   * console.log(table.type); // 'points'
+   */
   async exec({ jsonFileUrl, jsonObject, outputTableName, geometryColumns, workspace = DEFAULT_WORKSPACE_NAME, workspaceCoordinateFormat = DEFAULT_WORKSPACE_COORDINATE_FORMAT }: LoadJsonParams & { workspaceCoordinateFormat?: string }): Promise<JsonTable> {
     if (!jsonFileUrl && !jsonObject) {
       throw new Error('Either jsonFileUrl or jsonObject must be provided');
@@ -139,6 +164,12 @@ export class LoadJsonUseCase {
     }
   }
 
+  /**
+   * Verifies that every row in the table has a non-null geometry value.
+   *
+   * @param qualifiedTableName - fully-qualified table name (`workspace.table`).
+   * @throws {Error} If any rows contain null geometry values.
+   */
   private async ensureAllRowsHaveGeometry(qualifiedTableName: string): Promise<void> {
     const response = await this.conn.query(`
       SELECT COUNT(*) AS total_rows, COUNT(${DEFAULT_GEO_COLUMN_NAME}) AS geometry_rows
@@ -153,6 +184,16 @@ export class LoadJsonUseCase {
     }
   }
 
+  /**
+   * Infers the vector layer type by inspecting distinct geometry types in the table.
+   *
+   * Maps `POINT`/`MULTIPOINT` to `points`, `LINESTRING`/`MULTILINESTRING` to `polylines`, and `POLYGON`/`MULTIPOLYGON` to `polygons`.
+   *
+   * @param qualifiedTableName - fully-qualified table name (`workspace.table`).
+   * @param wktColumnName - name of the original WKT column used in error messages.
+   * @returns the single inferred layer type for the table.
+   * @throws {Error} If no non-null geometries exist, if an unsupported geometry type is encountered, or if mixed geometry families are found.
+   */
   private async inferWktLayerType(qualifiedTableName: string, wktColumnName: string): Promise<JsonGeometryLayerType> {
     const response = await this.conn.query(`
       SELECT DISTINCT CAST(ST_GeometryType(${DEFAULT_GEO_COLUMN_NAME}) AS VARCHAR) AS geometry_type
