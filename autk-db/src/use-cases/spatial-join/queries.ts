@@ -30,6 +30,7 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
   const selectString = getSelectString({
     tableRoot: params.tableRoot,
     tableJoin: effectiveJoinTable,
+    tableJoinNameForKeys: params.tableJoin.name,
     geometricColumnRoot: params.geometricColumnRoot,
     geometricColumnJoin: params.geometricColumnJoin,
     nearUseCentroid: params.nearUseCentroid,
@@ -90,6 +91,8 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
 function getSelectString(params: {
   tableRoot: Table;
   tableJoin: Table;
+  /** Original join table name, used for JSON key generation when the SQL alias differs. */
+  tableJoinNameForKeys: string;
   geometricColumnRoot: string;
   geometricColumnJoin: string;
   nearUseCentroid?: boolean;
@@ -99,6 +102,7 @@ function getSelectString(params: {
     const { aggregatesByFunction, nonAggregateColumns } = groupColumnsByAggregateFunction(params.groupBy.selectColumns);
     const sjoinObjectSql = buildSjoinObject(aggregatesByFunction, nonAggregateColumns, {
       tableJoin: params.tableJoin,
+      tableJoinNameForKeys: params.tableJoinNameForKeys,
       geometricColumnRoot: params.geometricColumnRoot,
       geometricColumnJoin: params.geometricColumnJoin,
       nearUseCentroid: params.nearUseCentroid,
@@ -155,19 +159,19 @@ function groupColumnsByAggregateFunction(selectColumns: Array<InternalColumn>) {
 function buildSjoinObject(
   aggregatesByFunction: Record<string, Array<{ column: string }>>,
   nonAggregateColumns: Array<{ column: string }>,
-  geomContext: { tableRoot: Table; tableJoin: Table; geometricColumnRoot: string; geometricColumnJoin: string; nearUseCentroid?: boolean },
+  geomContext: { tableRoot: Table; tableJoin: Table; tableJoinNameForKeys: string; geometricColumnRoot: string; geometricColumnJoin: string; nearUseCentroid?: boolean },
 ): string {
   const sjoinParts: string[] = [];
 
   Object.entries(aggregatesByFunction).forEach(([funcName, columns]) => {
     if (funcName === 'count') {
-      sjoinParts.push(buildCountExpression(columns[0], geomContext.tableJoin));
+      sjoinParts.push(buildCountExpression(columns[0], geomContext.tableJoinNameForKeys));
     } else if (funcName === 'weighted') {
       sjoinParts.push(buildWeightedExpression(columns[0], geomContext));
     } else if (funcName === 'collect') {
-      sjoinParts.push(buildCollectExpression(columns[0], geomContext.tableJoin));
+      sjoinParts.push(buildCollectExpression(columns[0], geomContext.tableJoin, geomContext.tableJoinNameForKeys));
     } else {
-      sjoinParts.push(buildNestedFunctionExpression(funcName, columns, geomContext.tableJoin));
+      sjoinParts.push(buildNestedFunctionExpression(funcName, columns, geomContext.tableJoin, geomContext.tableJoinNameForKeys));
     }
   });
 
@@ -180,37 +184,38 @@ function buildSjoinObject(
 
 function buildWeightedExpression(
   _column: { column: string },
-  geomContext: { tableRoot: Table; tableJoin: Table; geometricColumnRoot: string; geometricColumnJoin: string; nearUseCentroid?: boolean },
+  geomContext: { tableRoot: Table; tableJoin: Table; tableJoinNameForKeys: string; geometricColumnRoot: string; geometricColumnJoin: string; nearUseCentroid?: boolean },
 ): string {
-  const { tableRoot, tableJoin, geometricColumnRoot, geometricColumnJoin, nearUseCentroid } = geomContext;
+  const { tableRoot, tableJoin, geometricColumnRoot, geometricColumnJoin, nearUseCentroid, tableJoinNameForKeys } = geomContext;
   const rootGeom = nearUseCentroid
     ? `ST_Centroid(${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)})`
     : `${tableRoot.name}.${quoteIdentifier(geometricColumnRoot)}`;
   const joinGeom = nearUseCentroid
     ? `ST_Centroid(${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)})`
     : `${tableJoin.name}.${quoteIdentifier(geometricColumnJoin)}`;
-  return `'weighted', json_object('${escapeSqlString(tableJoin.name)}', SUM(1.0 / (ST_Distance(${rootGeom}, ${joinGeom}) + 1.0)))`;
+  return `'weighted', json_object('${escapeSqlString(tableJoinNameForKeys)}', SUM(1.0 / (ST_Distance(${rootGeom}, ${joinGeom}) + 1.0)))`;
 }
 
-function buildCollectExpression(_column: { column: string }, tableJoin: Table): string {
-  const valueExpression = generateValueExpression(tableJoin, _column.column, 'COLLECT');
-  return `'collect', json_object('${escapeSqlString(tableJoin.name)}', ${valueExpression})`;
+function buildCollectExpression(column: { column: string }, tableJoin: Table, tableJoinNameForKeys: string): string {
+  const valueExpression = generateValueExpression(tableJoin, column.column, 'COLLECT');
+  return `'collect', json_object('${escapeSqlString(tableJoinNameForKeys)}', ${valueExpression})`;
 }
 
-function buildCountExpression(column: { column: string }, tableJoin: Table): string {
-  const valueExpression = generateValueExpression(tableJoin, column.column, 'COUNT');
-  return `'count', json_object('${escapeSqlString(tableJoin.name)}', ${valueExpression})`;
+function buildCountExpression(column: { column: string }, tableJoinNameForKeys: string): string {
+  const valueExpression = generateValueExpressionForCount(column.column);
+  return `'count', json_object('${escapeSqlString(tableJoinNameForKeys)}', ${valueExpression})`;
 }
 
 function buildNestedFunctionExpression(
   funcName: string,
   columns: Array<{ column: string }>,
   tableJoin: Table,
+  tableJoinNameForKeys: string,
 ): string {
   const functionAttributes = columns
     .map((column) => {
       const valueExpression = generateValueExpression(tableJoin, column.column, funcName.toUpperCase());
-      const columnName = `${tableJoin.name}.${column.column}`;
+      const columnName = `${tableJoinNameForKeys}.${column.column}`;
       return `'${escapeSqlString(columnName)}', ${valueExpression}`;
     })
     .join(', ');
@@ -228,6 +233,13 @@ function buildNonAggregateColumns(
       return `'${escapeSqlString(column.column)}', ${valueExpression}`;
     })
     .join(', ');
+}
+
+function generateValueExpressionForCount(columnName: string): string {
+  if (columnName === '*') {
+    return 'COUNT(*)';
+  }
+  return `COUNT(${quoteIdentifier(columnName)})`;
 }
 
 function generateValueExpression(table: Table, columnName: string, aggregateFunction: string): string {

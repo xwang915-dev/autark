@@ -35,10 +35,8 @@ export class SpatialJoinNear {
             },
         });
 
-        const layer = 'table_osm_roads';
-
         await this.db.spatialQuery({
-            tableRootName: layer,
+            tableRootName: 'table_osm_roads',
             tableJoinName: 'noise',
             spatialPredicate: 'NEAR',
             nearDistance: 1000,
@@ -56,7 +54,7 @@ export class SpatialJoinNear {
         await this.map.init();
 
         await this.loadLayers();
-        await this.updateThematicData(layer);
+        await this.updateThematicData('table_osm_roads');
 
         this.map.draw();
     }
