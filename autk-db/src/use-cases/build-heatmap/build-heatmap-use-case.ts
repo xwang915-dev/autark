@@ -47,8 +47,7 @@ export class BuildHeatmapUseCase {
             {
                 tableRootName: gridTableName,
                 tableJoinName: params.tableJoinName,
-                spatialPredicate: 'NEAR',
-                near: { distance: params.near.distance },
+                near: params.near,
                 groupBy: params.groupBy,
             },
             [...tables, gridTable],
@@ -97,7 +96,7 @@ ${bandAssignments}
     }
 
     private getRasterBands(params: BuildHeatmapParams): Array<RasterBandMetadata & { jsonPath: string }> {
-        return (params.groupBy?.selectColumns ?? []).map((column, index) => {
+        return (params.groupBy ?? []).map((column, index) => {
             const aggregateFn = (column.aggregateFn ?? 'value').toLowerCase();
             const sourceKey = aggregateFn === 'count' || aggregateFn === 'weighted' || aggregateFn === 'collect'
                 ? params.tableJoinName

@@ -49,20 +49,17 @@ export class MapD3TemporalEvents {
         await this.db.spatialQuery({
             tableRootName: 'roads',
             tableJoinName: 'noise',
-            spatialPredicate: 'NEAR',
             near: { distance: 200 },
-            groupBy: {
-                selectColumns: [
-                    {
-                        column: 'key',
-                        aggregateFn: 'count',
-                    },
-                    {
-                        column: 'date',
-                        aggregateFn: 'collect',
-                    }
-                ],
-            },
+            groupBy: [
+                {
+                    column: 'key',
+                    aggregateFn: 'count',
+                },
+                {
+                    column: 'date',
+                    aggregateFn: 'collect',
+                }
+            ],
         });
 
         this.roads = await this.db.getLayer('roads');

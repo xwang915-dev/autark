@@ -35,14 +35,12 @@ export class Heatmap {
                 rows: 30,
                 columns: 30,
             },
-            groupBy: {
-                selectColumns: [
+            groupBy: [
                     {
                         column: 'Unique Key',
                         aggregateFn: 'count'
                     },
                 ],
-            },
         });
 
         const canvas = document.querySelector('canvas');

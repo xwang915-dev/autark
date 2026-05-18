@@ -29,15 +29,12 @@ export class SpatialJoin {
             await this.db.spatialQuery({
                 tableRootName: 'neighborhoods',
                 tableJoinName: csv,
-                spatialPredicate: 'INTERSECT',
-                groupBy: {
-                    selectColumns: [
-                        {
-                            column: 'Unique Key',
-                            aggregateFn: 'count',
-                        },
-                    ],
-                },
+                groupBy: [
+                    {
+                        column: 'Unique Key',
+                        aggregateFn: 'count',
+                    },
+                ],
             });
         }
 

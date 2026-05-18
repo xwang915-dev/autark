@@ -19,19 +19,18 @@ export interface SpatialQueryParams {
   tableRootName: string;
   /** Name of the table to join against the root. */
   tableJoinName: string;
-  /** Spatial predicate to use. Defaults to `'INTERSECT'`. */
-  spatialPredicate?: 'INTERSECT' | 'NEAR';
-  /** NEAR predicate configuration. Required when `spatialPredicate` is `'NEAR'`. */
+  /**
+   * NEAR predicate configuration. When present, the join uses `'NEAR'`;
+   * otherwise it defaults to `'INTERSECT'`.
+   */
   near?: NearConfig;
   /** Optional aggregation applied to join-side data. Keys are derived from `tableJoinName` and the aggregate function. */
-  groupBy?: {
-    selectColumns: Array<{
-      /** Column name to aggregate. Use `'*'` for row-level aggregations like `count`. */
-      column: string;
-      /** Aggregation function. Omit to pass the column through without aggregation. */
-      aggregateFn?: AggregateFunction;
-      /** When `true`, normalizes the aggregated value between 0 and 1. */
-      normalize?: boolean;
-    }>;
-  };
+  groupBy?: Array<{
+    /** Column name to aggregate. Use `'*'` for row-level aggregations like `count`. */
+    column: string;
+    /** Aggregation function. Omit to pass the column through without aggregation. */
+    aggregateFn?: AggregateFunction;
+    /** When `true`, normalizes the aggregated value between 0 and 1. */
+    normalize?: boolean;
+  }>;
 }

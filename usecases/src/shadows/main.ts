@@ -227,14 +227,11 @@ export class Shadows {
             await this.db.spatialQuery({
                 tableRootName: this.ROADS_LAYER,
                 tableJoinName: 'shadows',
-                spatialPredicate: 'NEAR',
                 near: { distance: 200 },
-                groupBy: {
-                    selectColumns: [{
-                        column: month,
-                        aggregateFn: 'avg',
-                    }],
-                },
+                groupBy: [{
+                    column: month,
+                    aggregateFn: 'avg',
+                }],
             });
         }
 

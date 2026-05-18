@@ -38,16 +38,13 @@ export class SpatialJoinNear {
         await this.db.spatialQuery({
             tableRootName: 'table_osm_roads',
             tableJoinName: 'noise',
-            spatialPredicate: 'NEAR',
             near: { distance: 1000 },
-            groupBy: {
-                selectColumns: [
-                    {
-                        column: 'Unique Key',
-                        aggregateFn: 'count',
-                    },
-                ],
-            },
+            groupBy: [
+                {
+                    column: 'Unique Key',
+                    aggregateFn: 'count',
+                },
+            ],
         });
 
         this.map = new AutkMap(canvas);

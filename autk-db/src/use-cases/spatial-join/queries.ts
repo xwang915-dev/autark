@@ -11,7 +11,7 @@ interface Params {
   spatialPredicate: string;
   nearDistance?: number;
   nearUseCentroid?: boolean;
-  groupBy: { selectColumns: Array<InternalColumn> } | null;
+  groupBy: Array<InternalColumn> | null;
 }
 
 const NEAR_CTE_ALIAS = 'csv_candidates';
@@ -70,7 +70,7 @@ export const SPATIAL_JOIN_QUERY = (params: Params) => {
     ${params.groupBy ? groupByString : ''}
   `;
 
-  const normalizedColumns = params.groupBy?.selectColumns.filter((col) => col.normalize) ?? [];
+  const normalizedColumns = params.groupBy?.filter((col) => col.normalize) ?? [];
 
   if (normalizedColumns.length > 0) {
     const cteParts = [...(nearCtePart ? [nearCtePart] : []), `sjoin_base AS (${innerQuery})`];
@@ -96,10 +96,10 @@ function getSelectString(params: {
   geometricColumnRoot: string;
   geometricColumnJoin: string;
   nearUseCentroid?: boolean;
-  groupBy: { selectColumns: Array<InternalColumn> } | null;
+  groupBy: Array<InternalColumn> | null;
 }) {
   if (params.groupBy) {
-    const { aggregatesByFunction, nonAggregateColumns } = groupColumnsByAggregateFunction(params.groupBy.selectColumns);
+    const { aggregatesByFunction, nonAggregateColumns } = groupColumnsByAggregateFunction(params.groupBy);
     const sjoinObjectSql = buildSjoinObject(aggregatesByFunction, nonAggregateColumns, {
       tableJoin: params.tableJoin,
       tableJoinNameForKeys: params.tableJoinNameForKeys,

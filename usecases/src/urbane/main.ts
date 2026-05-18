@@ -96,7 +96,6 @@ export class Urbane {
         await this.db.spatialQuery({
             tableRootName: 'table_osm_buildings',
             tableJoinName: 'neighborhoods',
-            spatialPredicate: 'INTERSECT',
         });
 
         setLoadingState('Loading urban datasets...', 'Importing arrests, schools, restaurants, and other datasets.');
@@ -113,14 +112,11 @@ export class Urbane {
             await this.db.spatialQuery({
                 tableRootName: 'neighborhoods',
                 tableJoinName: dataset,
-                spatialPredicate: 'INTERSECT',
-                groupBy: {
-                    selectColumns: [{
-                        column: 'key',
-                        aggregateFn: 'count',
-                        normalize: true,
-                    }],
-                },
+                groupBy: [{
+                    column: 'key',
+                    aggregateFn: 'count',
+                    normalize: true,
+                }],
             });
         }
 
@@ -164,14 +160,11 @@ export class Urbane {
         await this.db.spatialQuery({
             tableRootName: 'neighborhoods',
             tableJoinName: 'table_osm_roads',
-            spatialPredicate: 'INTERSECT',
-            groupBy: {
-                selectColumns: [{
-                    column: 'compute.skyViewFactor',
-                    aggregateFn: 'avg',
-                    normalize: true,
-                }],
-            },
+            groupBy: [{
+                column: 'compute.skyViewFactor',
+                aggregateFn: 'avg',
+                normalize: true,
+            }],
         });
 
         setLoadingState('Computing score...', 'Applying weighted GPU function over neighborhood data.');
@@ -397,30 +390,24 @@ export class Urbane {
             await this.db.spatialQuery({
                 tableRootName: 'active_buildings',
                 tableJoinName: dataset,
-                spatialPredicate: 'NEAR',
                 near: { distance: this.distance, useCentroid: true },
-                groupBy: {
-                    selectColumns: [{
-                        column: 'key',
-                        aggregateFn: 'count',
-                        normalize: true,
-                    }],
-                },
+                groupBy: [{
+                    column: 'key',
+                    aggregateFn: 'count',
+                    normalize: true,
+                }],
             });
         }
 
         await this.db.spatialQuery({
             tableRootName: 'active_buildings',
             tableJoinName: 'table_osm_roads',
-            spatialPredicate: 'NEAR',
             near: { distance: 300, useCentroid: true },
-            groupBy: {
-                selectColumns: [{
-                    column: 'compute.skyViewFactor',
-                    aggregateFn: 'avg',
-                    normalize: true,
-                }],
-            },
+            groupBy: [{
+                column: 'compute.skyViewFactor',
+                aggregateFn: 'avg',
+                normalize: true,
+            }],
         });
 
         this.activeBuildings = await this.computeScore(await this.db.getLayer('active_buildings'));

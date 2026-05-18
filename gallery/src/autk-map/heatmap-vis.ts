@@ -45,14 +45,12 @@ export class Heatmap {
                 rows: 20,
                 columns: 20,
             },
-            groupBy: {
-                selectColumns: [
+            groupBy: [
                     {
                         column: 'Unique Key',
                         aggregateFn: 'count'
                     },
                 ],
-            },
         });
 
 

@@ -53,14 +53,11 @@ export class OsmLayersApi {
         await this.db.spatialQuery({
             tableRootName: 'table_osm_roads',
             tableJoinName: 'lst',
-            spatialPredicate: 'NEAR',
             near: { distance: 1000 },
-            groupBy: {
-                selectColumns: Array.from({ length: BAND_COUNT }, (_, i) => ({
-                    column: `band_${i + 1}`,
-                    aggregateFn: 'avg',
-                })),
-            },
+            groupBy: Array.from({ length: BAND_COUNT }, (_, i) => ({
+                column: `band_${i + 1}`,
+                aggregateFn: 'avg',
+            })),
         });
 
         await this.applyLstCompute();

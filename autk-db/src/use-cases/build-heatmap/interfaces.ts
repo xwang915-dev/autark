@@ -5,14 +5,12 @@ export interface BuildHeatmapParams {
     /** NEAR predicate configuration for heatmap generation. */
     near: { distance: number };
     outputTableName: string;
-    groupBy?: {
-        selectColumns: Array<{
-            /** Column name to aggregate. Use `'*'` for row-level aggregations like `count`. */
-            column: string;
-            /** Aggregation function. */
-            aggregateFn?: HeatmapAggregateFunction;
-        }>;
-    };
+    groupBy?: Array<{
+        /** Column name to aggregate. Use `'*'` for row-level aggregations like `count`. */
+        column: string;
+        /** Aggregation function. */
+        aggregateFn?: HeatmapAggregateFunction;
+    }>;
     grid: {
         rows: number;
         columns: number;
