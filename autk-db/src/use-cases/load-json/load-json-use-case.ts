@@ -36,14 +36,39 @@ export class LoadJsonUseCase {
       tempFileCreated = true;
     }
 
+    const normalizedGeometryColumns = geometryColumns === true
+      ? {
+          mode: 'lat-lng' as const,
+          latColumnName: 'Latitude',
+          longColumnName: 'Longitude',
+          coordinateFormat: DEFAULT_INPUT_COORDINATE_FORMAT,
+        }
+      : geometryColumns && 'wktColumnName' in geometryColumns
+        ? {
+            mode: 'wkt' as const,
+            wktColumnName: geometryColumns.wktColumnName,
+            coordinateFormat: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+          }
+        : geometryColumns
+          ? {
+              mode: 'lat-lng' as const,
+              latColumnName: geometryColumns.latColumnName,
+              longColumnName: geometryColumns.longColumnName,
+              coordinateFormat: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+            }
+          : null;
+
     let loadJsonQuery: string;
-    if (geometryColumns) {
+    if (normalizedGeometryColumns?.mode === 'wkt') {
+      throw new Error('JSON WKT geometry columns are not implemented yet.');
+    }
+    if (normalizedGeometryColumns?.mode === 'lat-lng') {
       loadJsonQuery = LOAD_JSON_ON_TABLE_WITH_COORDINATES_QUERY({
         jsonFileUrl: jsonPath,
         tableName: outputTableName,
-        latColumnName: geometryColumns.latColumnName,
-        longColumnName: geometryColumns.longColumnName,
-        sourceCrs: geometryColumns.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT,
+        latColumnName: normalizedGeometryColumns.latColumnName,
+        longColumnName: normalizedGeometryColumns.longColumnName,
+        sourceCrs: normalizedGeometryColumns.coordinateFormat,
         targetCrs: workspaceCoordinateFormat,
         workspace,
       });

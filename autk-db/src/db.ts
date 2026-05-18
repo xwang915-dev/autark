@@ -421,15 +421,18 @@ export class AutkDb {
     }
 
     /**
-     * Loads a JSON array into the database, optionally creating a geometry column from lat/lng columns.
+     * Loads a JSON array into the database, optionally creating geometry from coordinate or WKT fields.
      *
-     * @param params - File URL or array, table name, and optional coordinate column mapping.
-     * @returns The created JSON table metadata.
-     * @throws If the database is not initialized, or both `jsonFileUrl` and `jsonObject` are provided.
+     * Supports the default `Latitude` / `Longitude` shorthand, custom lat/lng field names, or a single WKT geometry field.
+     *
+     * @param params - File URL or array, table name, and optional geometry field mapping.
+     * @returns The created JSON table metadata, including a renderable `type` when geometry is materialized.
+     * @throws If the database is not initialized, both `jsonFileUrl` and `jsonObject` are provided, or geometry creation fails.
      * @example
      * const table = await db.loadJson({
      *   jsonFileUrl: '/data/events.json',
      *   outputTableName: 'events',
+     *   geometryColumns: { wktColumnName: 'wkt' },
      * });
      */
     async loadJson(params: LoadJsonParams): Promise<JsonTable> {

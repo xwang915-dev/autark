@@ -69,7 +69,14 @@ export type {
 } from './use-cases/load-csv';
 export type { LoadCustomLayerParams } from './use-cases/load-custom-layer';
 export type { LoadGridLayerParams } from './use-cases/load-grid-layer';
-export type { LoadJsonParams } from './use-cases/load-json';
+export type {
+  JsonDefaultLatLngGeometryColumns,
+  JsonLatLngGeometryColumns,
+  JsonWktGeometryColumns,
+  JsonGeometryColumns,
+  JsonGeometryLayerType,
+  LoadJsonParams,
+} from './use-cases/load-json';
 export type { RawQueryParams, RawQueryOutput } from './use-cases/raw-query';
 export type { UpdateTableParams, UpdateStrategy } from './use-cases/update-table';
 

@@ -106,15 +106,15 @@ export interface CsvTable extends BaseTable {
 }
 
 /**
- * JSON table without renderable geometry metadata.
+ * JSON table that may remain tabular or expose renderable geometry.
  *
- * Represents generic JSON records that are queryable but not map-renderable by default.
+ * Represents generic JSON records and can become a point, polyline, or polygon layer when geometry columns are configured during loading.
  */
 export interface JsonTable extends BaseTable {
   /** Marks the table as originating from the JSON loader. */
   source: 'json';
-  /** Remains undefined because generic JSON imports do not imply a layer type. */
-  type?: undefined;
+  /** Optional renderable layer type when geometry columns were materialized during JSON loading. */
+  type?: Exclude<LayerType, 'raster'>;
 }
 
 /**
