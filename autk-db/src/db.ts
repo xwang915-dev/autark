@@ -310,6 +310,7 @@ export class AutkDb {
             workspaceData.osmBoundingBox = await this.getOsmBboxUseCase.exec({
                 osmTableName: boundaryTableName,
                 workspace: this.currentWorkspace,
+                coordinateFormat: targetCrs,
             });
             workspaceData.workspaceBoundingBox = workspaceData.osmBoundingBox;
 

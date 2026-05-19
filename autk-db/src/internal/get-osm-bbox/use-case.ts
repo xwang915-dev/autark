@@ -22,7 +22,7 @@ export class GetOsmBboxUseCase {
   async exec(params: GetOsmBboxParams): Promise<BoundingBox> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
     const result = await this.conn.query(
-      GET_OSM_BBOX_QUERY(params.osmTableName, workspace),
+      GET_OSM_BBOX_QUERY(params.osmTableName, workspace, params.coordinateFormat),
     );
     const rows = result.toArray();
 
