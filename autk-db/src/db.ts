@@ -25,7 +25,7 @@ import { toPlain } from './utils';
 
 import { DropTableUseCase } from './use-cases/drop-table';
 import { GetLayerBboxUseCase } from './use-cases/get-layer-bbox';
-import { GetBoundingBoxFromOsmUseCase } from './internal/get-bounding-box-from-osm/get-bounding-box-from-osm-use-case';
+import { GetOsmBboxUseCase } from './internal/get-osm-bbox/use-case';
 import { AssignBuildingIdsUseCase } from './internal/assign-building-ids/assign-building-ids-use-case';
 import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatmap';
 import { GetLayerUseCase } from './use-cases/get-layer';
@@ -113,7 +113,7 @@ export class AutkDb {
     private rawQueryUseCase?: RawQueryUseCase;
 
     /** OSM extent extraction use case for newly loaded OSM datasets. */
-    private getBoundingBoxFromOsmUseCase?: GetBoundingBoxFromOsmUseCase;
+    private getOsmBboxUseCase?: GetOsmBboxUseCase;
 
     /** Surface polygonization use case for converting surface lines into polygons. */
     private polygonizeSurfaceLayerUseCase?: PolygonizeSurfaceLayerUseCase;
@@ -186,7 +186,7 @@ export class AutkDb {
 
         this.getLayerBboxUseCase = new GetLayerBboxUseCase(this.conn);
         this.getLayerUseCase = new GetLayerUseCase(this.conn);
-        this.getBoundingBoxFromOsmUseCase = new GetBoundingBoxFromOsmUseCase(this.conn);
+        this.getOsmBboxUseCase = new GetOsmBboxUseCase(this.conn);
         this.getTablesUseCase = new GetTablesUseCase(this.conn);
 
         this.updateTableUseCase = new UpdateTableUseCase(this.db, this.conn);
@@ -281,7 +281,7 @@ export class AutkDb {
             !this.loadOsmFromOverpassApiUseCase ||
             !this.loadOsmFromPbfUseCase ||
             !this.dropTableUseCase ||
-            !this.getBoundingBoxFromOsmUseCase ||
+            !this.getOsmBboxUseCase ||
             !this.polygonizeSurfaceLayerUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
@@ -307,10 +307,9 @@ export class AutkDb {
 
         if (params.autoLoadLayers) {
             const boundaryTableName = `${params.outputTableName}_boundaries`;
-            workspaceData.osmBoundingBox = await this.getBoundingBoxFromOsmUseCase.exec({
+            workspaceData.osmBoundingBox = await this.getOsmBboxUseCase.exec({
                 osmTableName: boundaryTableName,
                 workspace: this.currentWorkspace,
-                coordinateFormat: targetCrs,
             });
             workspaceData.workspaceBoundingBox = workspaceData.osmBoundingBox;
 

@@ -2,13 +2,13 @@ import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
 import type { BoundingBox } from '../../types-core';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
-import { GetBoundingBoxFromOsmParams } from './interfaces';
-import { GET_BOUNDING_BOX_FROM_OSM_QUERY } from './queries';
+import { GetOsmBboxParams } from './interfaces';
+import { GET_OSM_BBOX_QUERY } from './queries';
 
 /**
  * Computes the geographic bounding box of an OSM boundary table.
  */
-export class GetBoundingBoxFromOsmUseCase {
+export class GetOsmBboxUseCase {
   constructor(private conn: AsyncDuckDBConnection) {}
 
   /**
@@ -19,10 +19,10 @@ export class GetBoundingBoxFromOsmUseCase {
    * @returns Named bounding box.
    * @throws If the table has no coordinates or invalid values.
    */
-  async exec(params: GetBoundingBoxFromOsmParams): Promise<BoundingBox> {
+  async exec(params: GetOsmBboxParams): Promise<BoundingBox> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
     const result = await this.conn.query(
-      GET_BOUNDING_BOX_FROM_OSM_QUERY(params.osmTableName, workspace, params.coordinateFormat),
+      GET_OSM_BBOX_QUERY(params.osmTableName, workspace),
     );
     const rows = result.toArray();
 
