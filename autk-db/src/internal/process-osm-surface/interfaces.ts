@@ -1,5 +1,9 @@
+/**
+ * Parameters for polygonizing an OSM surface layer from line geometries into closed polygons.
+ */
 export interface PolygonizeOsmSurfaceParams {
-    surfaceTableName: string;
-    workspace?: string;
+  /** Name of the surface table containing line geometries. */
+  surfaceTableName: string;
+  /** Optional workspace name. Defaults to `autk`. */
+  workspace?: string;
 }
-

@@ -14,14 +14,16 @@ import {
 
 import { CREATE_OSM_TABLE_QUERY, INSERT_OSM_DATA_QUERY } from '../../use-cases/load-osm-overpass/queries';
 
-
-
 /**
  * Shared OSM processing pipeline for splitting, tagging, and inserting OSM data.
  *
  * Consumed identically by both the Overpass API and PBF loading paths.
  */
 export class OsmProcessingPipeline {
+  /**
+   * @param db DuckDB instance.
+   * @param conn Active DuckDB connection.
+   */
   constructor(
     private readonly db: AsyncDuckDB,
     private readonly conn: AsyncDuckDBConnection,
@@ -35,6 +37,12 @@ export class OsmProcessingPipeline {
    * Splits the merged OSM response into two datasets:
    * - `osmData`: all nodes, ways, and non-boundary relations
    * - `boundariesData`: only the ways that form admin boundary rings + their nodes
+   *
+   * @param combined The full Overpass API response.
+   * @param queryArea Information about the geocoded area and its names.
+   * @returns An object containing split `osmData` and `boundariesData`.
+   * @example
+   * const { osmData, boundariesData } = pipeline.splitCombinedResponse(response, area);
    */
   splitCombinedResponse(
     combined: OverpassApiResponse,
@@ -85,6 +93,12 @@ export class OsmProcessingPipeline {
    * Derives the bounding box from elements already in memory.
    * Uses node lat/lon and way inline geometry produced by `out geom qt`
    * or resolved from a PBF node index.
+   *
+   * @param elements List of OSM elements to process.
+   * @returns The bounding box (south, north, west, east) or `null` if no coordinates found.
+   * @example
+   * const bbox = pipeline.computeBboxFromElements(elements);
+   * if (bbox) console.log(bbox.south);
    */
   computeBboxFromElements(
     elements: OsmElement[],
@@ -118,6 +132,15 @@ export class OsmProcessingPipeline {
   // Boundary relation detection
   // ---------------------------------------------------------------------------
 
+  /**
+   * Identifies relation IDs that correspond to the requested area boundaries.
+   *
+   * @param elements List of OSM elements to scan.
+   * @param areaNames Names of the areas used to match boundary relations.
+   * @returns A set of relation IDs that represent the requested boundaries.
+   * @example
+   * const boundaryIds = pipeline.getBoundaryRelationIds(elements, ['Berlin']);
+   */
   getBoundaryRelationIds(elements: OsmElement[], areaNames: string[]): Set<number> {
     const boundaryRelationIds = new Set<number>();
     const requestedAreaNames = new Set(areaNames);
@@ -142,6 +165,18 @@ export class OsmProcessingPipeline {
   // DuckDB insertion
   // ---------------------------------------------------------------------------
 
+  /**
+   * Inserts OSM data into a DuckDB table using a JSON payload.
+   *
+   * @param tableName Name of the target DuckDB table.
+   * @param osmData The OSM data to be inserted.
+   * @param workspace The DuckDB workspace name.
+   * @param ignoreTags Whether to skip derived layer tagging.
+   * @returns A promise that resolves when insertion is complete.
+   * @throws Error if JSON serialization fails.
+   * @example
+   * await pipeline.insertOsmDataUsingJson('osm_ways', response, 'autk');
+   */
   async insertOsmDataUsingJson(
     tableName: string,
     osmData: OverpassApiResponse,
@@ -188,6 +223,11 @@ export class OsmProcessingPipeline {
    * Ways with inline `geometry` carry both `nodes` (real OSM node IDs) and
    * `geometry` (lat/lon per node). Synthetic node records are emitted from
    * the inline geometry so the SQL layer queries can join on node ID.
+   *
+   * @param osmData The raw OSM response to format.
+   * @returns An array of formatted elements ready for JSON serialization.
+   * @example
+   * const formatted = pipeline.formatOsmDataForJson(response);
    */
   formatOsmDataForJson(osmData: OverpassApiResponse): FormattedElement[] {
     const formattedElements: FormattedElement[] = [];
@@ -264,6 +304,13 @@ export class OsmProcessingPipeline {
   // Derived layer tagging
   // ---------------------------------------------------------------------------
 
+  /**
+   * Determines a derived layer tag (e.g., 'parks', 'water') based on OSM tags.
+   *
+   * @param tags The OSM tags to analyze.
+   * @returns The derived layer name or `null` if no specific layer is identified.
+   * @private
+   */
   private getDerivedLayerTag(tags?: Record<string, string>): 'parks' | 'water' | 'roads' | 'buildings' | null {
     if (!tags) return null;
 
@@ -293,6 +340,13 @@ export class OsmProcessingPipeline {
     return null;
   }
 
+  /**
+   * Checks if the tags indicate a road-like element.
+   *
+   * @param tags The OSM tags to check.
+   * @returns `true` if the element is a road, `false` otherwise.
+   * @private
+   */
   private isRoadTagSet(tags: Record<string, string>): boolean {
     return (
       tags.highway !== undefined &&
@@ -301,6 +355,13 @@ export class OsmProcessingPipeline {
     );
   }
 
+  /**
+   * Checks if the tags indicate a building-like element.
+   *
+   * @param tags The OSM tags to check.
+   * @returns `true` if the element is a building, `false` otherwise.
+   * @private
+   */
   private isBuildingTagSet(tags: Record<string, string>): boolean {
     const hasBuildingKind =
       (tags.building !== undefined && !this.hasTagValue(tags, 'building', EXCLUDED_BUILDING_VALUES)) ||
@@ -312,11 +373,27 @@ export class OsmProcessingPipeline {
     return hasBuildingKind;
   }
 
+  /**
+   * Checks if a specific tag key has one of the provided values.
+   *
+   * @param tags The OSM tags to check.
+   * @param key The tag key to look for.
+   * @param values The list of allowed values for the key.
+   * @returns `true` if the tag exists and matches one of the values, `false` otherwise.
+   * @private
+   */
   private hasTagValue(tags: Record<string, string>, key: string, values: readonly string[]): boolean {
     const value = tags[key];
     return value !== undefined && values.includes(value);
   }
 
+  /**
+   * Adds a derived layer tag to the existing OSM tags if applicable.
+   *
+   * @param tags The original OSM tags.
+   * @returns A new object containing the original tags plus the `__autk_layer` tag, or the original tags if no layer is derived.
+   * @private
+   */
   private withDerivedLayerTag(tags?: Record<string, string>): Record<string, string> | undefined {
     if (!tags) return tags;
 

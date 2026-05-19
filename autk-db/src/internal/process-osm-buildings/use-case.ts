@@ -30,11 +30,21 @@ const BATCH_SIZE = 100;
  * Assigns grouped `building_id` values and computes aggregated building geometry for OSM building parts.
  */
 export class ProcessOsmBuildingsUseCase {
+  /**
+   * @param db DuckDB instance.
+   * @param conn Active DuckDB connection.
+   */
   constructor(
     private db: AsyncDuckDB,
     private conn: AsyncDuckDBConnection,
   ) {}
 
+  /**
+   * Executes the building processing pipeline: assigns building IDs and aggregates geometry.
+   * @param params Configuration for the processing operation.
+   * @returns The column definitions of the updated table.
+   * @example const columns = await useCase.exec({ tableName: 'osm_buildings' });
+   */
   async exec(params: ProcessOsmBuildingsParams): Promise<Column[]> {
     const { tableName, workspace = DEFAULT_WORKSPACE_NAME } = params;
     const qualifiedTableName = `${workspace}.${tableName}`;
@@ -67,6 +77,12 @@ export class ProcessOsmBuildingsUseCase {
     return await this.describeColumns(qualifiedTableName);
   }
 
+  /**
+   * Aggregates building geometry by grouping on `building_id`.
+   * @param qualifiedTableName The workspace-qualified table name.
+   * @param tableName The unqualified table name (used for temp table naming).
+   * @private
+   */
   private async aggregateGeometry(qualifiedTableName: string, tableName: string): Promise<void> {
     const tempTableName = `${tableName}_temp_agg`;
     const result = await this.conn.query(SELECT_BUILDING_IDS_QUERY(qualifiedTableName));
@@ -105,12 +121,25 @@ export class ProcessOsmBuildingsUseCase {
     await this.conn.query(DROP_TEMP_TABLE_QUERY(tempTableName));
   }
 
+  /**
+   * Checks whether a column exists in the given table.
+   * @param tableName The workspace-qualified table name.
+   * @param columnName The column name to look for.
+   * @returns `true` if the column exists, `false` otherwise.
+   * @private
+   */
   private async columnExists(tableName: string, columnName: string): Promise<boolean> {
     const pragma = await this.conn.query(PRAGMA_TABLE_INFO_QUERY(tableName));
     const arr = pragma?.toArray?.() ?? [];
     return arr.some((r: any) => String(r.name) === columnName);
   }
 
+  /**
+   * Retrieves the column definitions of a table.
+   * @param tableName The workspace-qualified table name.
+   * @returns An array of column objects with `name` and `type`.
+   * @private
+   */
   private async describeColumns(tableName: string): Promise<Column[]> {
     const describe = await this.conn.query(DESCRIBE_TABLE_QUERY(tableName));
     const rows = describe?.toArray?.() ?? [];

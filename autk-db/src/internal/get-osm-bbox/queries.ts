@@ -1,3 +1,14 @@
+/**
+ * Generates a SQL query to retrieve the bounding box of an OSM table.
+ *
+ * @param osmTableName Name of the OSM boundaries table.
+ * @param workspace The database workspace where the table resides.
+ * @param coordinateFormat Optional target CRS for spatial transformation.
+ * @returns A SQL string that selects the min/max longitude and latitude.
+ * @example
+ * const query = GET_OSM_BBOX_QUERY('osm_ways', 'autk');
+ * console.log(query);
+ */
 export const GET_OSM_BBOX_QUERY = (
   osmTableName: string,
   workspace: string,

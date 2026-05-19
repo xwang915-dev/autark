@@ -9,15 +9,21 @@ import { GET_OSM_BBOX_QUERY } from './queries';
  * Computes the geographic bounding box of an OSM boundary table.
  */
 export class GetOsmBboxUseCase {
+  /**
+   * @param conn DuckDB connection used for querying.
+   */
   constructor(private conn: AsyncDuckDBConnection) {}
 
   /**
    * Queries the spatial extent of boundary way geometries in an OSM table.
    *
-   * @param params.osmTableName Name of the OSM boundaries table.
-   * @param params.workspace Optional workspace name (defaults to `autk`).
-   * @returns Named bounding box.
-   * @throws If the table has no coordinates or invalid values.
+   * @param params Configuration for the bounding box calculation.
+   * @returns The calculated geographic bounding box.
+   * @throws Error if the table has no coordinates or contains invalid values.
+   * @example
+   * const useCase = new GetOsmBboxUseCase(conn);
+   * const bbox = await useCase.exec({ osmTableName: 'osm_ways' });
+   * console.log(bbox.minLon);
    */
   async exec(params: GetOsmBboxParams): Promise<BoundingBox> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
