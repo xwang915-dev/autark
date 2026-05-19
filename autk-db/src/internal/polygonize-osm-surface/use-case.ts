@@ -2,7 +2,7 @@ import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { FeatureCollection, LineString, Polygon } from 'geojson';
 import { polygonize } from '@turf/turf';
 
-import { PolygonizeSurfaceLayerParams } from './interfaces';
+import { PolygonizeOsmSurfaceParams } from './interfaces';
 import { OsmLayerTable } from '../../interfaces';
 import { GetLayerUseCase } from '../../use-cases/get-layer';
 import { LOAD_FEATURE_COLLECTION_QUERY } from '../../use-cases/load-geojson/queries';
@@ -13,7 +13,7 @@ import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 /**
  * Polygonizes a surface layer from line geometries into closed polygons.
  */
-export class PolygonizeSurfaceLayerUseCase {
+export class PolygonizeOsmSurfaceUseCase {
     private db: AsyncDuckDB;
     private conn: AsyncDuckDBConnection;
     private getLayerUseCase: GetLayerUseCase;
@@ -24,7 +24,7 @@ export class PolygonizeSurfaceLayerUseCase {
         this.getLayerUseCase = new GetLayerUseCase(conn);
     }
 
-    async exec(params: PolygonizeSurfaceLayerParams, surfaceTable: OsmLayerTable): Promise<OsmLayerTable> {
+    async exec(params: PolygonizeOsmSurfaceParams, surfaceTable: OsmLayerTable): Promise<OsmLayerTable> {
         const { surfaceTableName, workspace = DEFAULT_WORKSPACE_NAME } = params;
         const qualifiedSurfaceTableName = `${workspace}.${surfaceTableName}`;
         const qualifiedFeatureCollectionTableName = `${workspace}.${surfaceTableName}_feature_collection`;

@@ -38,7 +38,7 @@ import { LoadOsmLayerParams, LoadOsmLayerUseCase } from './use-cases/load-osm-la
 import { LoadOsmFromOverpassApiUseCase, LoadOsmParams, OsmLoadTimings } from './use-cases/load-osm-overpass';
 import { LoadOsmFromPbfUseCase } from './use-cases/load-osm-pbf';
 import { OsmProcessingPipeline } from './internal/osm-processing-pipeline/osm-processing-pipeline';
-import { PolygonizeSurfaceLayerUseCase } from './internal/polygonize-surface-layer/polygonize-surface-layer-use-case';
+import { PolygonizeOsmSurfaceUseCase } from './internal/polygonize-osm-surface/use-case';
 import { RawQueryParams, RawQueryUseCase, RawQueryOutput } from './use-cases/raw-query';
 import { SpatialJoinUseCase, SpatialQueryParams } from './use-cases/spatial-join';
 import { UpdateTableParams, UpdateTableUseCase } from './use-cases/update-table';
@@ -116,7 +116,7 @@ export class AutkDb {
     private getOsmBboxUseCase?: GetOsmBboxUseCase;
 
     /** Surface polygonization use case for converting surface lines into polygons. */
-    private polygonizeSurfaceLayerUseCase?: PolygonizeSurfaceLayerUseCase;
+    private polygonizeOsmSurfaceUseCase?: PolygonizeOsmSurfaceUseCase;
 
     /** Heatmap construction use case that aggregates source values into grid cells. */
     private buildHeatmapUseCase?: BuildHeatmapUseCase;
@@ -179,7 +179,7 @@ export class AutkDb {
         this.loadGeoTiffUseCase = new LoadGeoTiffUseCase(this.db, this.conn);
 
         this.assignBuildingIdsUseCase = new AssignBuildingIdsUseCase(this.db, this.conn);
-        this.polygonizeSurfaceLayerUseCase = new PolygonizeSurfaceLayerUseCase(this.db, this.conn);
+        this.polygonizeOsmSurfaceUseCase = new PolygonizeOsmSurfaceUseCase(this.db, this.conn);
 
         this.spatialJoinUseCase = new SpatialJoinUseCase(this.conn);
         this.buildHeatmapUseCase = new BuildHeatmapUseCase(this.conn);
@@ -282,7 +282,7 @@ export class AutkDb {
             !this.loadOsmFromPbfUseCase ||
             !this.dropTableUseCase ||
             !this.getOsmBboxUseCase ||
-            !this.polygonizeSurfaceLayerUseCase
+            !this.polygonizeOsmSurfaceUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
 
@@ -340,7 +340,7 @@ export class AutkDb {
                 timings.layers.push({ layerName: layerTable.name, layerType: layer, loadMs, featureCount });
 
                 if (layer === 'surface') {
-                    const updatedTable = await this.polygonizeSurfaceLayerUseCase.exec(
+                    const updatedTable = await this.polygonizeOsmSurfaceUseCase.exec(
                         { surfaceTableName: layerTable.name, workspace: this.currentWorkspace },
                         layerTable
                     );

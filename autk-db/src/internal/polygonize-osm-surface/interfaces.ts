@@ -1,4 +1,4 @@
-export interface PolygonizeSurfaceLayerParams {
+export interface PolygonizeOsmSurfaceParams {
     surfaceTableName: string;
     workspace?: string;
 }
