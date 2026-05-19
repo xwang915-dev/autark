@@ -26,8 +26,6 @@ import { toPlain } from './utils';
 import { DropTableUseCase } from './use-cases/drop-table';
 import { GetLayerBboxUseCase } from './use-cases/get-layer-bbox';
 import { GetBoundingBoxFromOsmUseCase } from './internal/get-bounding-box-from-osm/get-bounding-box-from-osm-use-case';
-import { TransformBoundingBoxCoordinatesUseCase } from './internal/transform-bounding-box-coordinates/transform-bounding-box-coordinates-use-case';
-
 import { AssignBuildingIdsUseCase } from './internal/assign-building-ids/assign-building-ids-use-case';
 import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatmap';
 import { GetLayerUseCase } from './use-cases/get-layer';
@@ -108,9 +106,6 @@ export class AutkDb {
     /** Table drop use case used for cleanup and overwrite flows. */
     private dropTableUseCase?: DropTableUseCase;
 
-    /** Coordinate transformation use case for workspace extent conversion. */
-    private transformBoundingBoxCoordinatesUseCase?: TransformBoundingBoxCoordinatesUseCase;
-
     /** GeoTIFF raster loading use case bound to the active database connection. */
     private loadGeoTiffUseCase?: LoadGeoTiffUseCase;
 
@@ -188,8 +183,6 @@ export class AutkDb {
 
         this.spatialJoinUseCase = new SpatialJoinUseCase(this.conn);
         this.buildHeatmapUseCase = new BuildHeatmapUseCase(this.conn);
-
-        this.transformBoundingBoxCoordinatesUseCase = new TransformBoundingBoxCoordinatesUseCase(this.conn);
 
         this.getLayerBboxUseCase = new GetLayerBboxUseCase(this.conn);
         this.getLayerUseCase = new GetLayerUseCase(this.conn);
@@ -289,7 +282,6 @@ export class AutkDb {
             !this.loadOsmFromPbfUseCase ||
             !this.dropTableUseCase ||
             !this.getBoundingBoxFromOsmUseCase ||
-            !this.transformBoundingBoxCoordinatesUseCase ||
             !this.polygonizeSurfaceLayerUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
@@ -315,13 +307,9 @@ export class AutkDb {
 
         if (params.autoLoadLayers) {
             const boundaryTableName = `${params.outputTableName}_boundaries`;
-            const rawBoundingBox = await this.getBoundingBoxFromOsmUseCase.exec({
+            workspaceData.osmBoundingBox = await this.getBoundingBoxFromOsmUseCase.exec({
                 osmTableName: boundaryTableName,
-                workspace: this.currentWorkspace
-            });
-
-            workspaceData.osmBoundingBox = await this.transformBoundingBoxCoordinatesUseCase.exec({
-                boundingBox: rawBoundingBox,
+                workspace: this.currentWorkspace,
                 coordinateFormat: targetCrs,
             });
             workspaceData.workspaceBoundingBox = workspaceData.osmBoundingBox;

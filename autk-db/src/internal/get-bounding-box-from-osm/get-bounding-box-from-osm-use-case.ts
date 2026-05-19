@@ -21,7 +21,9 @@ export class GetBoundingBoxFromOsmUseCase {
    */
   async exec(params: GetBoundingBoxFromOsmParams): Promise<BoundingBox> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
-    const result = await this.conn.query(GET_BOUNDING_BOX_FROM_OSM_QUERY(params.osmTableName, workspace));
+    const result = await this.conn.query(
+      GET_BOUNDING_BOX_FROM_OSM_QUERY(params.osmTableName, workspace, params.coordinateFormat),
+    );
     const rows = result.toArray();
 
     if (rows.length === 0) {
