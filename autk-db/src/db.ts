@@ -24,7 +24,7 @@ import {
 import { toPlain } from './utils';
 
 import { DropTableUseCase } from './use-cases/drop-table';
-import { GetBoundingBoxFromLayerUseCase } from './use-cases/get-bounding-box-from-layer';
+import { GetLayerBboxUseCase } from './use-cases/get-layer-bbox';
 import { GetBoundingBoxFromOsmUseCase } from './internal/get-bounding-box-from-osm/get-bounding-box-from-osm-use-case';
 import { TransformBoundingBoxCoordinatesUseCase } from './internal/transform-bounding-box-coordinates/transform-bounding-box-coordinates-use-case';
 
@@ -37,8 +37,8 @@ import { LoadGeojsonParams, LoadGeojsonUseCase } from './use-cases/load-geojson'
 import { LoadGeoTiffParams, LoadGeoTiffUseCase } from './use-cases/load-geotiff';
 import { LoadJsonParams, LoadJsonUseCase } from './use-cases/load-json';
 import { LoadOsmLayerParams, LoadOsmLayerUseCase } from './use-cases/load-osm-layer';
-import { LoadOsmFromOverpassApiUseCase, LoadOsmParams, OsmLoadTimings } from './use-cases/load-osm-from-overpass-api';
-import { LoadOsmFromPbfUseCase } from './use-cases/load-osm-from-pbf';
+import { LoadOsmFromOverpassApiUseCase, LoadOsmParams, OsmLoadTimings } from './use-cases/load-osm-overpass';
+import { LoadOsmFromPbfUseCase } from './use-cases/load-osm-pbf';
 import { OsmProcessingPipeline } from './internal/osm-processing-pipeline/osm-processing-pipeline';
 import { PolygonizeSurfaceLayerUseCase } from './internal/polygonize-surface-layer/polygonize-surface-layer-use-case';
 import { RawQueryParams, RawQueryUseCase, RawQueryOutput } from './use-cases/raw-query';
@@ -103,7 +103,7 @@ export class AutkDb {
     private spatialJoinUseCase?: SpatialJoinUseCase;
 
     /** Geometry extent query use case for renderable layers. */
-    private getBoundingBoxFromLayerUseCase?: GetBoundingBoxFromLayerUseCase;
+    private getLayerBboxUseCase?: GetLayerBboxUseCase;
 
     /** Table drop use case used for cleanup and overwrite flows. */
     private dropTableUseCase?: DropTableUseCase;
@@ -191,7 +191,7 @@ export class AutkDb {
 
         this.transformBoundingBoxCoordinatesUseCase = new TransformBoundingBoxCoordinatesUseCase(this.conn);
 
-        this.getBoundingBoxFromLayerUseCase = new GetBoundingBoxFromLayerUseCase(this.conn);
+        this.getLayerBboxUseCase = new GetLayerBboxUseCase(this.conn);
         this.getLayerUseCase = new GetLayerUseCase(this.conn);
         this.getBoundingBoxFromOsmUseCase = new GetBoundingBoxFromOsmUseCase(this.conn);
         this.getTablesUseCase = new GetTablesUseCase(this.conn);
@@ -497,7 +497,7 @@ export class AutkDb {
             !this.conn ||
             !this.loadGeojsonUseCase ||
             !this.assignBuildingIdsUseCase ||
-            !this.getBoundingBoxFromLayerUseCase
+            !this.getLayerBboxUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
 
@@ -511,7 +511,7 @@ export class AutkDb {
         this.registerTable(table);
 
         if (!workspaceData.workspaceBoundingBox) {
-            workspaceData.workspaceBoundingBox = await this.getBoundingBoxFromLayerUseCase.exec({
+            workspaceData.workspaceBoundingBox = await this.getLayerBboxUseCase.exec({
                 layerTableName: table.name,
                 workspace: this.currentWorkspace,
             });
@@ -706,7 +706,7 @@ export class AutkDb {
      * console.log(bbox.minLon, bbox.maxLon);
      */
     async getBoundingBoxFromLayer(layerName: string): Promise<BoundingBox> {
-        if (!this.db || !this.conn || !this.getBoundingBoxFromLayerUseCase)
+        if (!this.db || !this.conn || !this.getLayerBboxUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
         const layerTable = this.tables.find((t) => t.name === layerName);
@@ -719,7 +719,7 @@ export class AutkDb {
             );
         }
 
-        return this.getBoundingBoxFromLayerUseCase.exec({
+        return this.getLayerBboxUseCase.exec({
             layerTableName: layerName,
             workspace: this.currentWorkspace,
         });

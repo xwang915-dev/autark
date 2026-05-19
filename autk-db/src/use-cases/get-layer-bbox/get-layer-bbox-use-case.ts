@@ -1,5 +1,5 @@
 import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
-import { GetBoundingBoxFromLayerParams } from './interfaces';
+import { GetLayerBboxParams } from './interfaces';
 import type { BoundingBox } from '../../types-core';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 import { GET_BOUNDING_BOX_FROM_LAYER_QUERY } from './queries';
@@ -7,7 +7,7 @@ import { GET_BOUNDING_BOX_FROM_LAYER_QUERY } from './queries';
 /**
  * Computes the geographic bounding box of a layer table.
  */
-export class GetBoundingBoxFromLayerUseCase {
+export class GetLayerBboxUseCase {
   constructor(private conn: AsyncDuckDBConnection) {}
 
   /**
@@ -18,7 +18,7 @@ export class GetBoundingBoxFromLayerUseCase {
    * @returns Named bounding box with `minLon`, `minLat`, `maxLon`, `maxLat`.
    * @throws If the table has no geometries or invalid coordinates.
    */
-  async exec(params: GetBoundingBoxFromLayerParams): Promise<BoundingBox> {
+  async exec(params: GetLayerBboxParams): Promise<BoundingBox> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
     const result = await this.conn.query(GET_BOUNDING_BOX_FROM_LAYER_QUERY(params.layerTableName, workspace));
     const rows = result.toArray();

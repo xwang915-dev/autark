@@ -13,7 +13,7 @@ import {
   DEFAULT_WORKSPACE_NAME,
 } from '../../consts';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
-import { LoadOsmParams, OsmElement } from '../load-osm-from-overpass-api/interfaces';
+import { LoadOsmParams, OsmElement } from '../load-osm-overpass/interfaces';
 import { OsmProcessingPipeline } from '../../internal/osm-processing-pipeline/osm-processing-pipeline';
 import { blockToElements, resolveWayGeometries } from './osm-pbf-parser';
 

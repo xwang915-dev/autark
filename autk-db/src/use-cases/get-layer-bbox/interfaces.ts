@@ -1,4 +1,4 @@
-export interface GetBoundingBoxFromLayerParams {
+export interface GetLayerBboxParams {
   layerTableName: string;
   workspace?: string;
 }

@@ -1,6 +1,6 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import { OsmElement } from '../../use-cases/load-osm-from-overpass-api/interfaces';
+import { OsmElement } from '../../use-cases/load-osm-overpass/interfaces';
 import {
   PARKS_LEISURE_VALUES,
   PARKS_LANDUSE_VALUES,
@@ -11,7 +11,7 @@ import {
   EXCLUDED_BUILDING_VALUES,
 } from '../../consts';
 
-import { CREATE_OSM_TABLE_QUERY, INSERT_OSM_DATA_QUERY } from '../../use-cases/load-osm-from-overpass-api/queries';
+import { CREATE_OSM_TABLE_QUERY, INSERT_OSM_DATA_QUERY } from '../../use-cases/load-osm-overpass/queries';
 
 interface OverpassApiResponse {
   elements: OsmElement[];

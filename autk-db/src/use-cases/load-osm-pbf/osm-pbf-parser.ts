@@ -6,7 +6,7 @@ import type {
   OsmPbfRelation,
 } from '@osmix/pbf';
 
-import type { OsmElement } from '../load-osm-from-overpass-api/interfaces';
+import type { OsmElement } from '../load-osm-overpass/interfaces';
 
 const TEXT_DECODER = new TextDecoder();
 

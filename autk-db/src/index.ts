@@ -56,7 +56,7 @@ export type {
   OsmLoadTimings,
   LayerLoadTimings,
   LoadOsmParams,
-} from './use-cases/load-osm-from-overpass-api';
+} from './use-cases/load-osm-overpass';
 export type { SpatialQueryParams, AggregateFunction, NearConfig } from './use-cases/spatial-join';
 export type { BuildHeatmapParams, HeatmapAggregateFunction } from './use-cases/build-heatmap';
 export type {
