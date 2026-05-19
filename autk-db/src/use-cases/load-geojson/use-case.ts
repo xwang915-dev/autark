@@ -12,14 +12,33 @@ import { mapGeometryTypeToLayerType } from '../../types-core';
  * Loads a GeoJSON FeatureCollection as a spatial layer table.
  */
 export class LoadGeojsonUseCase {
+  /** DuckDB instance used for registering files and VFS operations. */
   private db: AsyncDuckDB;
+  /** Active DuckDB connection used for executing queries. */
   private conn: AsyncDuckDBConnection;
 
+  /**
+   * @param db - DuckDB instance used for file registration.
+   * @param conn - Active DuckDB connection for queries.
+   */
   constructor(db: AsyncDuckDB, conn: AsyncDuckDBConnection) {
     this.db = db;
     this.conn = conn;
   }
 
+  /**
+   * Imports a GeoJSON FeatureCollection into DuckDB as a spatial layer.
+   *
+   * Supports loading from a URL or an in-memory object, optional CRS transformation,
+   * and optional clipping by `boundingBox`.
+   *
+   * @param params - Load configuration including input source, output table name, and optional bounding box or layer type.
+   * @returns Metadata describing the created GeoJSON table.
+   * @throws Error when input is invalid, missing, or the HTTP fetch fails for a URL input.
+   * @example
+   * const useCase = new LoadGeojsonUseCase(db, conn);
+   * const table = await useCase.exec({ geojsonFileUrl: '/tmp/fc.json', outputTableName: 'my_layer' });
+   */
   async exec({
     geojsonFileUrl,
     geojsonObject,
@@ -82,6 +101,20 @@ export class LoadGeojsonUseCase {
     };
   }
 
+  /**
+   * Creates a DuckDB table from a GeoJSON FeatureCollection by writing a temporary
+   * file to the DuckDB VFS, loading it as a feature collection, transforming, and
+   * creating the final layer table.
+   *
+   * @param geojson - The FeatureCollection to import.
+   * @param outputTableName - Name of the resulting table to create.
+   * @param sourceCrs - CRS of the source features.
+   * @param targetCrs - Target CRS for the workspace.
+   * @param workspace - Workspace (schema) name.
+   * @param boundingBox - Optional bounding box to intersect geometries.
+   * @returns The DuckDB query result describing the created table.
+   * @private
+   */
   private async createTableFromFeatureCollection(
     geojson: FeatureCollection,
     outputTableName: string,

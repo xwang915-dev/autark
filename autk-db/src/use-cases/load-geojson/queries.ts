@@ -1,5 +1,15 @@
 import type { BoundingBox } from '../../types-core';
 
+/**
+ * Creates a temporary DuckDB table from a GeoJSON file registered in the VFS.
+ *
+ * @param geojsonFileUrl - VFS path to the GeoJSON file (registered via `db.registerFileText`).
+ * @param featureCollectionTableName - Name for the intermediate feature collection table.
+ * @param workspace - Workspace (schema) where the temp table will be created.
+ * @returns A SQL string that creates the intermediate feature collection table.
+ * @example
+ * const sql = LOAD_FEATURE_COLLECTION_QUERY('tmp.geojson', 'my_fc', 'autk');
+ */
 export const LOAD_FEATURE_COLLECTION_QUERY = (geojsonFileUrl: string, featureCollectionTableName: string, workspace: string) => {
   const qualifiedTableName = `${workspace}.${featureCollectionTableName}`;
   return `
@@ -8,6 +18,22 @@ export const LOAD_FEATURE_COLLECTION_QUERY = (geojsonFileUrl: string, featureCol
   `;
 };
 
+/**
+ * Generates SQL to transform a feature collection into a typed spatial layer table.
+ *
+ * The function optionally clips geometries to a bounding box, transforms CRS,
+ * and writes a final table that is described at the end of the query.
+ *
+ * @param featureCollectionTableName - Intermediate feature collection table name.
+ * @param outputTableName - Desired output layer table name.
+ * @param sourceCrs - Input CRS of features.
+ * @param targetCrs - Target CRS for the workspace.
+ * @param workspace - Workspace (schema) name.
+ * @param boundingBox - Optional spatial extent to clip/intersect geometries.
+ * @returns SQL string that creates the output table from the feature collection and drops the intermediate table.
+ * @example
+ * const sql = LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY('my_fc', 'layer', 'EPSG:4326', 'EPSG:3857', 'autk');
+ */
 export const LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY = (
   featureCollectionTableName: string,
   outputTableName: string,
