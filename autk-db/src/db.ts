@@ -21,12 +21,11 @@ import {
     DEFAULT_WORKSPACE_COORDINATE_FORMAT
 } from './consts';
 
-import { toPlain } from './utils';
+import { getColumnsFromDuckDbTableDescribe, toPlain } from './utils';
 
 import { DropTableUseCase } from './use-cases/drop-table';
 import { GetLayerBboxUseCase } from './use-cases/get-layer-bbox';
 import { GetOsmBboxUseCase } from './internal/get-osm-bbox/use-case';
-import { AssignIncrementalBuildingIdsUseCase } from './internal/assign-incremental-building-ids/use-case';
 import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatmap';
 import { GetLayerUseCase } from './use-cases/get-layer';
 import { GetTablesParams, GetTablesOutput, GetTablesUseCase } from './use-cases/get-tables';
@@ -87,9 +86,6 @@ export class AutkDb {
 
     /** GeoJSON layer loading use case bound to the active database connection. */
     private loadGeojsonUseCase?: LoadGeojsonUseCase;
-
-    /** Building identifier assignment use case for per-feature GeoJSON building inputs. */
-    private assignIncrementalBuildingIdsUseCase?: AssignIncrementalBuildingIdsUseCase;
 
     /** JSON loading use case bound to the active database connection. */
     private loadJsonUseCase?: LoadJsonUseCase;
@@ -178,7 +174,6 @@ export class AutkDb {
         this.loadGeojsonUseCase = new LoadGeojsonUseCase(this.db, this.conn);
         this.loadGeoTiffUseCase = new LoadGeoTiffUseCase(this.db, this.conn);
 
-        this.assignIncrementalBuildingIdsUseCase = new AssignIncrementalBuildingIdsUseCase(this.conn);
         this.polygonizeOsmSurfaceUseCase = new PolygonizeOsmSurfaceUseCase(this.db, this.conn);
 
         this.spatialJoinUseCase = new SpatialJoinUseCase(this.conn);
@@ -484,7 +479,6 @@ export class AutkDb {
             !this.db ||
             !this.conn ||
             !this.loadGeojsonUseCase ||
-            !this.assignIncrementalBuildingIdsUseCase ||
             !this.getLayerBboxUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
@@ -506,11 +500,15 @@ export class AutkDb {
         }
 
         if (params.layerType === 'buildings') {
-            const columns = await this.assignIncrementalBuildingIdsUseCase.exec({
-                tableName: table.name,
-                workspace: this.currentWorkspace,
-            });
-            table.columns = columns;
+            const qualifiedTableName = `${this.currentWorkspace}.${table.name}`;
+            const hasBuildingId = table.columns.some((column) => column.name === 'building_id');
+            if (!hasBuildingId) {
+                await this.conn.query(`ALTER TABLE ${qualifiedTableName} ADD COLUMN building_id BIGINT`);
+            }
+            await this.conn.query(`UPDATE ${qualifiedTableName} SET building_id = CAST(id AS BIGINT)`);
+
+            const describeUpdatedTableResponse = await this.conn.query(`DESCRIBE ${qualifiedTableName}`);
+            table.columns = getColumnsFromDuckDbTableDescribe(describeUpdatedTableResponse.toArray());
         }
 
         return table;
