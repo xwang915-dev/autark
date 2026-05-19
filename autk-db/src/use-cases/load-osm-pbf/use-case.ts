@@ -14,7 +14,7 @@ import {
 } from '../../consts';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { LoadOsmParams, OsmElement } from '../load-osm-overpass/interfaces';
-import { OsmProcessingPipeline } from '../../internal/osm-processing-pipeline/pipeline';
+import { OsmProcessingPipeline } from '../../internal/process-osm/pipeline';
 import { blockToElements, resolveWayGeometries } from './osm-pbf-parser';
 
 interface OverpassApiResponse {
