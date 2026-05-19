@@ -4,13 +4,19 @@ import { DropTableParams } from './interfaces';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 import { DROP_TABLE_QUERY } from './queries';
 
+/**
+ * Result of a table drop operation.
+ *
+ * @param success - Whether the table was dropped successfully.
+ * @param message - Human-readable status or error description.
+ */
 export interface DropTableResult {
   success: boolean;
   message: string;
 }
 
 /**
- * Drops a table from the current workspace.
+ * Drops a table from the current workspace, returning success/failure rather than throwing.
  */
 export class DropTableUseCase {
   constructor(private conn: AsyncDuckDBConnection) {}
@@ -18,8 +24,7 @@ export class DropTableUseCase {
   /**
    * Drops the specified table, returning success/failure rather than throwing.
    *
-   * @param params.tableName Name of the table to drop.
-   * @param params.workspace Optional workspace name (defaults to `autk`).
+   * @param params - Drop configuration including table name and optional workspace.
    * @returns Result indicating success or failure with a message.
    * @throws Never throws. Errors are caught and returned in the result.
    */

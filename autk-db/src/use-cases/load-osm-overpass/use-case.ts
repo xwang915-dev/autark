@@ -17,10 +17,16 @@ import {
 
 import { OsmProcessingPipeline } from '../../internal/process-osm/pipeline';
 
+/**
+ * Internal shape for a parsed Overpass API JSON response.
+ */
 interface OverpassApiResponse {
   elements: OsmElement[];
 }
 
+/**
+ * Aggregate execution result returned by the Overpass import use case.
+ */
 interface OsmExecResult {
   tables: OsmTable[];
   osmElementCount: number;
@@ -29,6 +35,9 @@ interface OsmExecResult {
   boundariesProcessingMs: number;
 }
 
+/**
+ * Internal structure describing tag selector arrays for Overpass queries.
+ */
 type OverpassTagSelectors = {
   way: string[];
   relation: string[];
@@ -36,12 +45,19 @@ type OverpassTagSelectors = {
 
 /**
  * Loads OSM data from the Overpass API with caching, retry, and slot polling.
+ *
+ * The use case fetches boundaries first, then requested layer groups (parks, water, roads, buildings),
+ * merges responses, inserts normalized OSM elements into DuckDB, and returns table metadata and timings.
  */
 export class LoadOsmFromOverpassApiUseCase {
   private readonly conn: AsyncDuckDBConnection;
   private readonly cache: HttpCache<OverpassApiResponse>;
   private readonly pipeline: OsmProcessingPipeline;
 
+  /**
+   * @param conn - Active DuckDB connection used for inserting and describing tables.
+   * @param pipeline - Shared OSM processing pipeline for splitting and inserting data.
+   */
   constructor(conn: AsyncDuckDBConnection, pipeline: OsmProcessingPipeline) {
     this.conn = conn;
     this.cache = new HttpCache('overpass-api-cache', 24 * 60 * 60 * 1000); // 24h TTL
@@ -52,6 +68,16 @@ export class LoadOsmFromOverpassApiUseCase {
   // Public API
   // ---------------------------------------------------------------------------
 
+  /**
+   * Performs the full Overpass data fetch and loads it into DuckDB.
+   *
+   * @param params - Configuration for the Overpass area, optional PBF fallback, and auto-load settings.
+   * @returns Execution result including created table metadata and timing statistics.
+   * @throws When required administrative boundaries are missing or network/fetch failures occur.
+   * @example
+   * const useCase = new LoadOsmFromOverpassApiUseCase(conn, pipeline);
+   * const result = await useCase.exec({ outputTableName: 'osm', queryArea: { geocodeArea: 'Berlin', areas: ['Berlin'] } });
+   */
   async exec(params: LoadOsmParams): Promise<OsmExecResult> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
     const onProgress = params.onProgress;
@@ -112,12 +138,25 @@ export class LoadOsmFromOverpassApiUseCase {
   // Cache
   // ---------------------------------------------------------------------------
 
+  /**
+   * Builds a cache key for combined Overpass responses using the geocode area and requested layers.
+   *
+   * @param queryArea - Object containing the geocodeArea and area names.
+   * @param layers - Optional list of requested layers to include in the cache key.
+   * @returns A stable cache key string.
+   */
   private getCacheKey(queryArea: { geocodeArea: string; areas: string[] }, layers?: string[]): string {
     const areas = [...queryArea.areas].sort().join(',');
     const layerKey = layers && layers.length > 0 ? `-layers:${[...layers].sort().join('+')}` : '';
     return `overpass-combined-${queryArea.geocodeArea}-${areas}${layerKey}`;
   }
 
+  /**
+   * Builds the full-data cache key (no layer filtering) for Overpass responses.
+   *
+   * @param queryArea - Object containing the geocodeArea and area names.
+   * @returns A cache key string for the full dataset.
+   */
   private getFullDataCacheKey(queryArea: { geocodeArea: string; areas: string[] }): string {
     const areas = [...queryArea.areas].sort().join(',');
     return `overpass-combined-${queryArea.geocodeArea}-${areas}`;

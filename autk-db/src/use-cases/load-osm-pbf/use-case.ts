@@ -32,21 +32,36 @@ interface OsmExecResult {
 type RequestedLayer = 'roads' | 'buildings' | 'parks' | 'water';
 type Bbox = { south: number; north: number; west: number; east: number };
 
+/**
+ * Compact probabilistic ID filter used to track presence of numeric IDs.
+ *
+ * Implemented as a small bloom-like filter using three hash functions over a bit array.
+ * This is used to record candidate node/way IDs while streaming large PBF files.
+ */
 class IdFilter {
   private bits: Uint8Array;
   private bitCount: number;
 
+  /**
+   * @param bitCount - Size of the bit array (number of bits). Defaults to 2^27.
+   */
   constructor(bitCount: number = 1 << 27) {
     this.bitCount = bitCount;
     this.bits = new Uint8Array(Math.ceil(bitCount / 8));
   }
 
+  /**
+   * Adds an ID to the filter (probabilistic).
+   */
   add(id: number): void {
     this.setBit(this.hash1(id));
     this.setBit(this.hash2(id));
     this.setBit(this.hash3(id));
   }
 
+  /**
+   * Tests whether an ID is probably present in the filter.
+   */
   has(id: number): boolean {
     return this.getBit(this.hash1(id)) && this.getBit(this.hash2(id)) && this.getBit(this.hash3(id));
   }
@@ -164,6 +179,12 @@ export class LoadOsmFromPbfUseCase {
     };
   }
 
+  /**
+   * Normalizes the requested layer list to the supported shape.
+   *
+   * @param params - Load parameters containing autoLoadLayers.
+   * @returns An array of requested layers narrowed to `RequestedLayer`.
+   */
   private getRequestedLayers(params: LoadOsmParams): RequestedLayer[] {
     const layers = params.autoLoadLayers?.layers ?? ['roads', 'buildings', 'parks', 'water'];
     return layers.filter((layer): layer is RequestedLayer =>
@@ -172,6 +193,10 @@ export class LoadOsmFromPbfUseCase {
   }
 
   // Pass 1: find requested boundary relations and their member ways
+  /**
+   * Scans the PBF file to locate administrative boundary relations and collects
+   * the IDs of their member ways. Returns sets of relation IDs and way IDs.
+   */
   private async collectBoundaryContext(
     pbfFileUrl: string,
     areaNames: string[],

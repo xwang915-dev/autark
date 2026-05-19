@@ -57,6 +57,9 @@ export function blockToElements(block: OsmPbfBlock): OsmElement[] {
 // Internal converters
 // ---------------------------------------------------------------------------
 
+/**
+ * Convert a PBF node into an OsmElement node record.
+ */
 function pbfNodeToElement(
   node: OsmPbfNode,
   block: OsmPbfBlock,
@@ -71,6 +74,9 @@ function pbfNodeToElement(
   };
 }
 
+/**
+ * Decode dense (delta-encoded) nodes from a primitive group into OsmElement records.
+ */
 function denseNodesToElements(
   dense: OsmPbfDenseNodes,
   block: OsmPbfBlock,
@@ -115,6 +121,9 @@ function denseNodesToElements(
   return elements;
 }
 
+/**
+ * Convert a PBF way into an OsmElement way (node refs only; geometry resolved later).
+ */
 function pbfWayToElement(
   way: OsmPbfWay,
   _block: OsmPbfBlock,
@@ -137,6 +146,9 @@ function pbfWayToElement(
   };
 }
 
+/**
+ * Convert a PBF relation into an OsmElement relation with members resolved.
+ */
 function pbfRelationToElement(
   rel: OsmPbfRelation,
   _block: OsmPbfBlock,
@@ -168,6 +180,9 @@ function pbfRelationToElement(
   };
 }
 
+/**
+ * Decode tag key/value arrays into a plain object, or `undefined` when empty.
+ */
 function tagsFromKv(
   keys: number[],
   vals: number[],
@@ -182,10 +197,16 @@ function tagsFromKv(
   return tags;
 }
 
+/**
+ * Convert raw PBF lat integer to floating degrees using the block granularity/offset.
+ */
 function decodeLat(block: OsmPbfBlock, value: number): number {
   return value / (block.granularity ?? 1e7) + (block.lat_offset ?? 0);
 }
 
+/**
+ * Convert raw PBF lon integer to floating degrees using the block granularity/offset.
+ */
 function decodeLon(block: OsmPbfBlock, value: number): number {
   return value / (block.granularity ?? 1e7) + (block.lon_offset ?? 0);
 }

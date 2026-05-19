@@ -1,6 +1,15 @@
 import { Table } from '../../interfaces';
 import type { LayerType } from '../../types-core';
 
+/**
+ * Builds a SQL query that exports a layer table as a GeoJSON FeatureCollection.
+ *
+ * @note Raster layers return a single feature with raster metadata. Building layers
+ *   without `building_id` group geometries by row; those with it merge parts per building.
+ * @param layerTable - The layer table including its type and column definitions.
+ * @param workspace - Workspace (schema) name containing the table.
+ * @returns A SQL string that returns a single `geojson` column with GeoJSON output.
+ */
 export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType }, workspace: string) => {
   const hasBuildingIdColumn = !!layerTable.columns?.some((c) => c.name === 'building_id');
   const qualifiedTableName = `${workspace}.${layerTable.name}`;
@@ -85,6 +94,14 @@ export const GET_LAYER_AS_GEOJSON_QUERY = (layerTable: Table & { type: LayerType
 `;
 };
 
+/**
+ * Builds a SQL expression that extracts table properties as JSON.
+ *
+ * @note Returns `COALESCE(CAST(properties AS JSON), '{}'::JSON)` when a dedicated
+ *   `properties` column exists, otherwise constructs a `json_object` from non-geometry columns.
+ * @param layerTable - The table with its column definitions.
+ * @returns A SQL fragment that evaluates to a JSON object of property values.
+ */
 function buildPropertiesExpression(layerTable: Table & { type: LayerType }): string {
   if (hasPropertiesColumn(layerTable)) {
     return `COALESCE(CAST(properties AS JSON), '{}'::JSON)`;
@@ -100,10 +117,22 @@ function buildPropertiesExpression(layerTable: Table & { type: LayerType }): str
     .join(', ')})`;
 }
 
+/**
+ * Checks whether a table has a dedicated `properties` column.
+ *
+ * @param table - The table to inspect.
+ * @returns `true` if a column named `properties` exists in the table schema.
+ */
 function hasPropertiesColumn(table: Table): boolean {
   return table.columns.some((column) => column.name === 'properties');
 }
 
+/**
+ * Escapes a SQL identifier by wrapping it in double quotes and doubling any internal quotes.
+ *
+ * @param identifier - The raw identifier string to escape.
+ * @returns A safely quoted SQL identifier (e.g. `"my_column"`).
+ */
 function quoteIdentifier(identifier: string): string {
   return `"${identifier.replace(/"/g, '""')}"`;
 }

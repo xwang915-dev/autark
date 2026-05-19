@@ -48,12 +48,29 @@ export class LoadOsmLayerUseCase {
   private conn: AsyncDuckDBConnection;
   private processOsmBuildingsUseCase: ProcessOsmBuildingsUseCase;
 
+  /**
+   * @param db - DuckDB instance for file registration and VFS operations.
+   * @param conn - Active DuckDB connection for executing SQL.
+   */
   constructor(db: AsyncDuckDB, conn: AsyncDuckDBConnection) {
     this.db = db;
     this.conn = conn;
     this.processOsmBuildingsUseCase = new ProcessOsmBuildingsUseCase(db, conn);
   }
 
+  /**
+   * Runs the extraction pipeline for the requested OSM layer.
+   *
+   * The function executes SQL to extract the layer, optionally appends relation
+   * geometries when configured, and runs post-processing (e.g. building aggregation).
+   *
+   * @param params - Configuration including input table name, requested layer, and optional bbox/workspace.
+   * @returns Metadata describing the created layer table.
+   * @throws Error if the requested layer type is unsupported or required geometry data is missing.
+   * @example
+   * const useCase = new LoadOsmLayerUseCase(db, conn);
+   * const table = await useCase.exec({ osmInputTableName: 'osm_data', layer: 'buildings', outputTableName: 'buildings' });
+   */
   async exec(params: LoadOsmLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
     const sourceCrs = params.coordinateFormat || DEFAULT_INPUT_COORDINATE_FORMAT;
     const targetCrs = params.workspaceCoordinateFormat || DEFAULT_WORKSPACE_COORDINATE_FORMAT;
@@ -112,6 +129,15 @@ export class LoadOsmLayerUseCase {
     };
   }
 
+  /**
+   * Appends resolved relation area geometries to the output layer table.
+   *
+   * The method builds relation area records, writes them to a temporary VFS file,
+   * and inserts them into the output table, optionally clipping by bounding box.
+   *
+   * @param params - Input/output table names, layer, CRS, bbox and workspace.
+   * @returns Number of skipped relations (those that couldn't be resolved to geometry).
+   */
   private async appendRelationAreaGeometries(params: {
     inputTableName: string;
     outputTableName: string;
@@ -161,6 +187,14 @@ export class LoadOsmLayerUseCase {
     return skipped;
   }
 
+  /**
+   * Constructs polygon/multipolygon GeoJSON geometries for relation elements.
+   *
+   * @param inputTableName - Name of the OSM elements table to read.
+   * @param layer - The thematic layer name used to filter relations.
+   * @param workspace - Workspace containing the input table.
+   * @returns An object containing the list of GeoJSON relation records and the count of skipped relations.
+   */
   private async buildRelationAreaRecords(
     inputTableName: string,
     layer: LayerType,
@@ -220,6 +254,14 @@ export class LoadOsmLayerUseCase {
     return { records, skipped };
   }
 
+  /**
+   * Builds a Polygon or MultiPolygon GeoJSON geometry for a single relation.
+   *
+   * @param relation - Relation row with member refs and types.
+   * @param refsByWayId - Map of way ID → node refs.
+   * @param coordinateByNodeId - Map of node ID → coordinate position.
+   * @returns A Polygon or MultiPolygon geometry, or `null` if construction fails.
+   */
   private buildRelationGeometry(
     relation: RelationRow,
     refsByWayId: Map<number, number[]>,
@@ -275,6 +317,14 @@ export class LoadOsmLayerUseCase {
     };
   }
 
+  /**
+   * Converts a set of way IDs into closed rings where possible, stitching open segments.
+   *
+   * @param wayIds - Way IDs that should form rings.
+   * @param refsByWayId - Map from way ID to its node refs.
+   * @param coordinateByNodeId - Map from node ID to its coordinate.
+   * @returns An array of closed WayRing objects.
+   */
   private buildClosedRings(
     wayIds: number[],
     refsByWayId: Map<number, number[]>,
@@ -301,6 +351,13 @@ export class LoadOsmLayerUseCase {
     return [...standaloneClosedRings, ...this.stitchOpenWaySegmentsIntoRings(openSegments)];
   }
 
+  /**
+   * Attempts to join open way segments into closed rings by repeatedly merging
+   * segments that share endpoints.
+   *
+   * @param segments - Array of open way segments to stitch.
+   * @returns Array of stitched rings (closed WayRing objects).
+   */
   private stitchOpenWaySegmentsIntoRings(segments: WayRing[]): WayRing[] {
     const unusedSegments = [...segments];
     const rings: WayRing[] = [];
@@ -330,6 +387,9 @@ export class LoadOsmLayerUseCase {
     return rings;
   }
 
+  /**
+   * Tries to merge two way segments if their endpoints touch; returns the merged ring or null.
+   */
   private tryMergeRings(a: WayRing, b: WayRing): WayRing | null {
     const aStart = a.refs[0];
     const aEnd = a.refs[a.refs.length - 1];
@@ -344,6 +404,9 @@ export class LoadOsmLayerUseCase {
     return null;
   }
 
+  /**
+   * Concatenates two rings by joining their refs and coordinates (dropping duplicated junction point).
+   */
   private concatRings(left: WayRing, right: WayRing): WayRing {
     return {
       refs: [...left.refs, ...right.refs.slice(1)],
@@ -351,6 +414,9 @@ export class LoadOsmLayerUseCase {
     };
   }
 
+  /**
+   * Returns a new WayRing with refs and coordinates reversed.
+   */
   private reverseRing(ring: WayRing): WayRing {
     return {
       refs: [...ring.refs].reverse(),
@@ -358,6 +424,9 @@ export class LoadOsmLayerUseCase {
     };
   }
 
+  /**
+   * Point-in-polygon test (ray-casting) to determine if `position` lies inside `ring`.
+   */
   private ringContainsPosition(ring: Position[], position: Position): boolean {
     const [x, y] = position;
     let inside = false;
@@ -373,6 +442,11 @@ export class LoadOsmLayerUseCase {
     return inside;
   }
 
+  /**
+   * Normalizes various tag encodings into a plain string-to-string record.
+   *
+   * Accepts Map, array-of-entries, and plain object encodings.
+   */
   private parseTags(rawTags: unknown): Record<string, string> {
     const value = typeof rawTags === 'string' ? JSON.parse(rawTags) as unknown : rawTags;
     if (!value) return {};
@@ -401,11 +475,17 @@ export class LoadOsmLayerUseCase {
     return {};
   }
 
+  /**
+   * Converts an iterable of numeric-like values into a number[] by coercion.
+   */
   private toNumberArray(value: unknown): number[] {
     if (!value) return [];
     return Array.from(value as Iterable<unknown>).map((item) => this.toNumber(item));
   }
 
+  /**
+   * Converts an iterable of values into a string[] by coercion.
+   */
   private toStringArray(value: unknown): string[] {
     if (!value) return [];
     return Array.from(value as Iterable<unknown>).map((item) => String(item));
@@ -415,3 +495,4 @@ export class LoadOsmLayerUseCase {
     return typeof value === 'bigint' ? Number(value) : Number(value);
   }
 }
+

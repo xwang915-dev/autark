@@ -13,6 +13,18 @@ type Params = {
 
 const AREA_LAYERS: LayerType[] = ['buildings', 'parks', 'water'];
 
+/**
+ * Produces a SQL script that extracts a specific OSM thematic layer from the raw
+ * OSM elements table and writes a typed output table.
+ *
+ * The returned SQL creates intermediate temp tables for the selected layer,
+ * builds geometries by joining nodes and ways, and writes the final table.
+ *
+ * @param params - Parameters controlling input/output table names and CRS.
+ * @returns A SQL string that creates the output layer table and describes it.
+ * @example
+ * const sql = LOAD_LAYER_QUERY({ tableName: 'osm_ways', layer: 'buildings', sourceCrs: 'EPSG:4326', targetCrs: 'EPSG:3857', outputTableName: 'osm_buildings', workspace: 'autk' });
+ */
 export const LOAD_LAYER_QUERY = ({ tableName, layer, sourceCrs, targetCrs, outputTableName, boundingBox, workspace = DEFAULT_WORKSPACE_NAME }: Params) => {
   const query = getLayerQuery(layer);
 
@@ -21,7 +33,7 @@ export const LOAD_LAYER_QUERY = ({ tableName, layer, sourceCrs, targetCrs, outpu
 
   let actualTableName = qualifiedInputTableName;
   if (layer === 'surface') {
-    const baseTableName = tableName.replace(new RegExp(`^${workspace}\\.`), '');
+    const baseTableName = tableName.replace(new RegExp(`^${workspace}\.`), '');
     actualTableName = `${workspace}.${baseTableName}_boundaries`;
   }
 
@@ -58,6 +70,14 @@ export const LOAD_LAYER_QUERY = ({ tableName, layer, sourceCrs, targetCrs, outpu
   `;
 };
 
+/**
+ * Builds a geometry expression for area-like layers (buildings, parks, water).
+ *
+ * @param sourceCrs - CRS of source coordinates.
+ * @param targetCrs - Destination CRS for the output layer.
+ * @param boundingBox - Optional bbox to clip the resulting geometry.
+ * @returns A SQL fragment that computes polygon or linestring geometry.
+ */
 function buildAreaGeometryExpression(sourceCrs: string, targetCrs: string, boundingBox?: BoundingBox) {
   const baseGeometry = `
     CASE
@@ -89,6 +109,12 @@ function buildAreaGeometryExpression(sourceCrs: string, targetCrs: string, bound
   return `ST_Intersection(${baseGeometry}, ${clippingGeometry})`;
 }
 
+/**
+ * Chooses the correct geometry SQL fragment based on whether the layer is an area-type.
+ *
+ * @param params - Object containing source/target CRS, optional boundingBox, and the layer type.
+ * @returns A SQL fragment producing the geometry column for SELECT.
+ */
 function buildGeometrySelect({
   sourceCrs,
   targetCrs,
@@ -112,6 +138,12 @@ function buildGeometrySelect({
       )`;
 }
 
+/**
+ * Optionally appends a HAVING clause to require intersection with the bbox for area layers.
+ *
+ * @param params - Object containing source/target CRS, optional boundingBox, and the layer type.
+ * @returns A SQL `HAVING` clause or empty string.
+ */
 function buildHavingClause({
   sourceCrs,
   targetCrs,
@@ -130,6 +162,10 @@ function buildHavingClause({
   return `HAVING ST_Intersects(${geometry}, ${clippingGeometry})`;
 }
 
+/**
+ * Maps a layer name to the corresponding SQL fragment producer.
+ * Returns an empty producer when no layer-specific selector applies.
+ */
 function getLayerQuery(layer: string): (t: string) => string {
   switch (layer) {
     case 'parks':
@@ -147,30 +183,45 @@ function getLayerQuery(layer: string): (t: string) => string {
   }
 }
 
+/**
+ * SQL producer that selects park ways from a raw OSM table.
+ */
 const GET_PARKS = (tableName: string) => `
   CREATE OR REPLACE TEMP TABLE parks AS
     SELECT id, tags, refs FROM ${tableName}
       WHERE kind = 'way' AND map_extract(tags, '__autk_layer')[1] = 'parks';
 `;
 
+/**
+ * SQL producer that selects water ways from a raw OSM table.
+ */
 const GET_WATER = (tableName: string) => `
   CREATE OR REPLACE TEMP TABLE water AS
     SELECT id, tags, refs FROM ${tableName}
       WHERE kind = 'way' AND map_extract(tags, '__autk_layer')[1] = 'water';
 `;
 
+/**
+ * SQL producer that selects building ways from a raw OSM table.
+ */
 const GET_BUILDINGS = (tableName: string) => `
   CREATE OR REPLACE TEMP TABLE buildings AS
     SELECT id, tags, refs FROM ${tableName}
       WHERE kind = 'way' AND map_extract(tags, '__autk_layer')[1] = 'buildings';
 `;
 
+/**
+ * SQL producer that selects road ways from a raw OSM table.
+ */
 const GET_ROADS = (tableName: string) => `
   CREATE OR REPLACE TEMP TABLE roads AS
     SELECT id, tags, refs FROM ${tableName}
       WHERE kind = 'way' AND map_extract(tags, '__autk_layer')[1] = 'roads' AND array_length(refs) > 1;
 `;
 
+/**
+ * SQL producer that selects surface ways from a raw OSM table.
+ */
 const GET_SURFACE = (tableName: string) => `
   CREATE OR REPLACE TEMP TABLE surface AS
     SELECT id, tags, refs FROM ${tableName}

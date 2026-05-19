@@ -8,15 +8,21 @@ import { GET_BOUNDING_BOX_FROM_LAYER_QUERY } from './queries';
  * Computes the geographic bounding box of a layer table.
  */
 export class GetLayerBboxUseCase {
+  /**
+   * @param conn - Active DuckDB connection used for querying.
+   */
   constructor(private conn: AsyncDuckDBConnection) {}
 
   /**
    * Queries the spatial extent of a layer's geometry column.
    *
-   * @param params.layerTableName Name of the layer table.
-   * @param params.workspace Optional workspace name (defaults to `autk`).
-   * @returns Named bounding box with `minLon`, `minLat`, `maxLon`, `maxLat`.
-   * @throws If the table has no geometries or invalid coordinates.
+   * @param params - Configuration for the bounding box calculation.
+   * @returns The calculated bounding box with `minLon`, `minLat`, `maxLon`, `maxLat`.
+   * @throws Error If the table has no geometries or contains invalid coordinates.
+   * @example
+   * const useCase = new GetLayerBboxUseCase(conn);
+   * const bbox = await useCase.exec({ layerTableName: 'osm_roads' });
+   * console.log(bbox.minLon);
    */
   async exec(params: GetLayerBboxParams): Promise<BoundingBox> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
