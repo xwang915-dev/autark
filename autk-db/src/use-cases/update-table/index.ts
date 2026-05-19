@@ -5,6 +5,6 @@
  *
  * @module update-table
  */
-export { UpdateTableUseCase } from './update-table-use-case';
+export { UpdateTableUseCase } from './use-case';
 export type { UpdateTableParams, UpdateTableResult, UpdateStrategy } from './interfaces';
 export { parseIdColumn } from './interfaces';

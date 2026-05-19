@@ -5,7 +5,7 @@
  *
  * @module load-json
  */
-export * from './load-json-use-case';
+export * from './use-case';
 export type {
   JsonDefaultLatLngGeometryColumns,
   JsonLatLngGeometryColumns,

@@ -1,2 +1,2 @@
-export { DropTableUseCase } from './drop-table-use-case';
+export { DropTableUseCase } from './use-case';
 export type { DropTableParams } from './interfaces';

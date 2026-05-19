@@ -1,3 +1,3 @@
-export * from './raw-query-use-case';
+export * from './use-case';
 export * from './interfaces';
 export * from './errors';

@@ -5,6 +5,6 @@
  *
  * @module get-tables
  */
-export { GetTablesUseCase } from './get-tables-use-case';
+export { GetTablesUseCase } from './use-case';
 export type { GetTablesParams, GetTablesOutput } from './interfaces';
 

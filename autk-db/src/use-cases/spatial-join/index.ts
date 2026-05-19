@@ -6,6 +6,6 @@
  *
  * @module spatial-join
  */
-export { SpatialJoinUseCase } from './spatial-join-use-case';
+export { SpatialJoinUseCase } from './use-case';
 export type { SpatialQueryParams, AggregateFunction, NearConfig } from './interfaces';
 export * from './errors';

@@ -1,2 +1,2 @@
-export { LoadGeoTiffUseCase } from './load-geotiff-use-case';
+export { LoadGeoTiffUseCase } from './use-case';
 export type { LoadGeoTiffParams } from './interfaces';

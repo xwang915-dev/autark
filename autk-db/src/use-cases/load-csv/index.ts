@@ -6,7 +6,7 @@
  * @example
  * import { LoadCsvUseCase, type LoadCsvParams } from './use-cases/load-csv';
  */
-export * from './load-csv-use-case';
+export * from './use-case';
 export type {
   CsvDefaultLatLngGeometryColumns,
   CsvLatLngGeometryColumns,
