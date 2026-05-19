@@ -7,8 +7,8 @@ import type { BoundingBox, LayerType } from '../../types-core';
 import { OsmLayerTable } from '../../interfaces';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../consts';
-import { AssignBuildingIdsUseCase } from '../../internal/assign-building-ids/assign-building-ids-use-case';
-import { AggregateBuildingLayerUseCase } from '../../internal/aggregate-building-layer/aggregate-building-layer-use-case';
+import { AssignBuildingIdsUseCase } from '../../internal/assign-building-ids/use-case';
+import { AggregateBuildingLayerUseCase } from '../../internal/aggregate-building-layer/use-case';
 import { getOsmProcessingConfig } from './osm-processing-config';
 
 type RelationRow = {

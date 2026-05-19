@@ -1,6 +1,7 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
 import { OsmElement } from '../../use-cases/load-osm-overpass/interfaces';
+import { FormattedElement, OverpassApiResponse } from './interfaces';
 import {
   PARKS_LEISURE_VALUES,
   PARKS_LANDUSE_VALUES,
@@ -13,9 +14,7 @@ import {
 
 import { CREATE_OSM_TABLE_QUERY, INSERT_OSM_DATA_QUERY } from '../../use-cases/load-osm-overpass/queries';
 
-interface OverpassApiResponse {
-  elements: OsmElement[];
-}
+
 
 /**
  * Shared OSM processing pipeline for splitting, tagging, and inserting OSM data.
@@ -190,27 +189,7 @@ export class OsmProcessingPipeline {
    * `geometry` (lat/lon per node). Synthetic node records are emitted from
    * the inline geometry so the SQL layer queries can join on node ID.
    */
-  formatOsmDataForJson(osmData: OverpassApiResponse): Array<{
-    kind: 'node' | 'way' | 'relation';
-    id: number;
-    tags: Array<{ k: string; v: string }>;
-    refs: number[];
-    lat: number | null;
-    lon: number | null;
-    ref_roles: string[];
-    ref_types: string[];
-  }> {
-    type FormattedElement = {
-      kind: 'node' | 'way' | 'relation';
-      id: number;
-      tags: Array<{ k: string; v: string }>;
-      refs: number[];
-      lat: number | null;
-      lon: number | null;
-      ref_roles: string[];
-      ref_types: string[];
-    };
-
+  formatOsmDataForJson(osmData: OverpassApiResponse): FormattedElement[] {
     const formattedElements: FormattedElement[] = [];
     const emittedNodeIds = new Set<number>();
 

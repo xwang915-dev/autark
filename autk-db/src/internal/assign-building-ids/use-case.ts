@@ -1,8 +1,20 @@
-import { computeIntersectingClusterIds } from '../../types-core';
-
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
+
+import { computeIntersectingClusterIds } from '../../types-core';
 import { Column } from '../../interfaces';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
+import { AssignBuildingIdsParams } from './interfaces';
+import {
+  SELECT_BUILDING_GEOMETRY_QUERY,
+  ALTER_ADD_BUILDING_ID_QUERY,
+  CREATE_TEMP_JSON_TABLE_QUERY,
+  CREATE_TEMP_IDS_TABLE_QUERY,
+  UPDATE_BUILDING_IDS_QUERY,
+  DROP_TEMP_IDS_TABLE_QUERY,
+  DROP_TEMP_JSON_TABLE_QUERY,
+  PRAGMA_TABLE_INFO_QUERY,
+  DESCRIBE_TABLE_QUERY,
+} from './queries';
 
 /**
  * Assigns stable `building_id` values by clustering intersecting building geometries.
@@ -21,66 +33,49 @@ export class AssignBuildingIdsUseCase {
    * clusters in JS, writes a stable building_id per row back to the table, and
    * returns the updated column list for the table.
    */
-  async exec(params: { tableName: string; workspace?: string }): Promise<Column[]> {
+  async exec(params: AssignBuildingIdsParams): Promise<Column[]> {
     const { tableName, workspace = DEFAULT_WORKSPACE_NAME } = params;
     const qualifiedTableName = `${workspace}.${tableName}`;
 
-    // Read id and geometry as GeoJSON for JS processing
-    const selectSql = `
-      SELECT id, CAST(ST_AsGeoJSON(geometry) AS JSON) AS geometry_json
-      FROM ${qualifiedTableName}
-    `;
-    const res = await this.conn.query(selectSql);
+    const res = await this.conn.query(SELECT_BUILDING_GEOMETRY_QUERY(qualifiedTableName));
     const rows = res.toArray();
 
     const items = rows.map((r: any) => ({ id: r.id as number, geometry: JSON.parse(r.geometry_json) as any }));
 
     const idToCluster = computeIntersectingClusterIds(items);
 
-    // Skip if nothing to assign
     if (idToCluster.size === 0) {
       return await this.describeColumns(qualifiedTableName);
     }
 
-    // Ensure building_id column exists
     const hasBuildingId = await this.columnExists(qualifiedTableName, 'building_id');
     if (!hasBuildingId) {
-      await this.conn.query(`ALTER TABLE ${qualifiedTableName} ADD COLUMN building_id BIGINT`);
+      await this.conn.query(ALTER_ADD_BUILDING_ID_QUERY(qualifiedTableName));
     }
 
-    // Bulk insert using an in-memory JSON file (same pattern as custom layer loader)
     const jsonRows = Array.from(idToCluster.entries()).map(([id, building_id]) => ({ id: Number(id), building_id }));
     const vfsPath = `tmp_building_ids_${Date.now()}_${Math.random().toString(36).slice(2, 10)}.json`;
     await this.db.registerFileText(vfsPath, JSON.stringify({ rows: jsonRows }));
 
-    await this.conn.query(`CREATE TEMP TABLE __tmp_building_ids_json AS SELECT * FROM '${vfsPath}'`);
-    await this.conn.query(`
-      CREATE TEMP TABLE __tmp_building_ids AS
-      SELECT CAST(row.id AS BIGINT) AS id, CAST(row.building_id AS BIGINT) AS building_id
-      FROM (SELECT UNNEST(rows) AS row FROM __tmp_building_ids_json);
-    `);
+    await this.conn.query(CREATE_TEMP_JSON_TABLE_QUERY(vfsPath));
+    await this.conn.query(CREATE_TEMP_IDS_TABLE_QUERY());
+    await this.conn.query(UPDATE_BUILDING_IDS_QUERY(qualifiedTableName));
 
-    // Update table by joining on id
-    await this.conn.query(
-      `UPDATE ${qualifiedTableName} AS t SET building_id = b.building_id FROM __tmp_building_ids AS b WHERE t.id = b.id`,
-    );
-
-    // Cleanup temp table
-    await this.conn.query(`DROP TABLE __tmp_building_ids`);
-    await this.conn.query(`DROP TABLE __tmp_building_ids_json`);
+    await this.conn.query(DROP_TEMP_IDS_TABLE_QUERY());
+    await this.conn.query(DROP_TEMP_JSON_TABLE_QUERY());
     await this.db.dropFile(vfsPath);
 
     return await this.describeColumns(qualifiedTableName);
   }
 
   private async columnExists(tableName: string, columnName: string): Promise<boolean> {
-    const pragma = await this.conn.query(`PRAGMA table_info('${tableName}')`);
+    const pragma = await this.conn.query(PRAGMA_TABLE_INFO_QUERY(tableName));
     const arr = pragma?.toArray?.() ?? [];
     return arr.some((r: any) => String(r.name) === columnName);
   }
 
   private async describeColumns(tableName: string): Promise<Column[]> {
-    const describe = await this.conn.query(`DESCRIBE ${tableName}`);
+    const describe = await this.conn.query(DESCRIBE_TABLE_QUERY(tableName));
     const rows = describe?.toArray?.() ?? [];
     return rows.map((r: any) => ({ name: r[0] ?? r.column_name ?? r.name, type: r[1] ?? r.column_type ?? r.type }));
   }

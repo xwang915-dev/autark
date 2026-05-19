@@ -15,7 +15,7 @@ import {
   DEFAULT_WORKSPACE_NAME,
 } from '../../consts';
 
-import { OsmProcessingPipeline } from '../../internal/osm-processing-pipeline/osm-processing-pipeline';
+import { OsmProcessingPipeline } from '../../internal/osm-processing-pipeline/pipeline';
 
 interface OverpassApiResponse {
   elements: OsmElement[];
