@@ -4,7 +4,7 @@ import { polygonize } from '@turf/turf';
 
 import { PolygonizeSurfaceLayerParams } from './interfaces';
 import { OsmLayerTable } from '../../interfaces';
-import { GetLayerGeojsonUseCase } from '../../use-cases/get-layer-geojson';
+import { GetLayerUseCase } from '../../use-cases/get-layer';
 import { LOAD_FEATURE_COLLECTION_QUERY } from '../../use-cases/load-geojson/queries';
 import { LOAD_POLYGONIZED_LAYER_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
@@ -16,12 +16,12 @@ import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 export class PolygonizeSurfaceLayerUseCase {
     private db: AsyncDuckDB;
     private conn: AsyncDuckDBConnection;
-    private getLayerGeojsonUseCase: GetLayerGeojsonUseCase;
+    private getLayerUseCase: GetLayerUseCase;
 
     constructor(db: AsyncDuckDB, conn: AsyncDuckDBConnection) {
         this.db = db;
         this.conn = conn;
-        this.getLayerGeojsonUseCase = new GetLayerGeojsonUseCase(conn);
+        this.getLayerUseCase = new GetLayerUseCase(conn);
     }
 
     async exec(params: PolygonizeSurfaceLayerParams, surfaceTable: OsmLayerTable): Promise<OsmLayerTable> {
@@ -29,7 +29,7 @@ export class PolygonizeSurfaceLayerUseCase {
         const qualifiedSurfaceTableName = `${workspace}.${surfaceTableName}`;
         const qualifiedFeatureCollectionTableName = `${workspace}.${surfaceTableName}_feature_collection`;
 
-        const geojson = await this.getLayerGeojsonUseCase.exec(surfaceTable, workspace) as FeatureCollection<LineString>;
+        const geojson = await this.getLayerUseCase.exec(surfaceTable, workspace) as FeatureCollection<LineString>;
         const polygonizedGeojson = polygonize(geojson) as FeatureCollection<Polygon>;
 
         await this.conn.query(`DROP TABLE IF EXISTS ${qualifiedSurfaceTableName};`);

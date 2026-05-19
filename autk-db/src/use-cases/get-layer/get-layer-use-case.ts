@@ -9,7 +9,7 @@ import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 /**
  * Exports a layer table as a GeoJSON FeatureCollection.
  */
-export class GetLayerGeojsonUseCase {
+export class GetLayerUseCase {
   private conn: AsyncDuckDBConnection;
 
   constructor(conn: AsyncDuckDBConnection) {

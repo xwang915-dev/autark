@@ -3,8 +3,8 @@
  *
  * Supports pagination via `limit` and `offset`, and works across workspaces.
  *
- * @module get-table-data
+ * @module get-tables
  */
-export { GetTableDataUseCase } from './get-table-data-use-case';
-export type { GetTableDataParams, GetTableDataOutput } from './interfaces';
+export { GetTablesUseCase } from './get-tables-use-case';
+export type { GetTablesParams, GetTablesOutput } from './interfaces';
 

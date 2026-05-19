@@ -30,8 +30,8 @@ import { TransformBoundingBoxCoordinatesUseCase } from './internal/transform-bou
 
 import { AssignBuildingIdsUseCase } from './internal/assign-building-ids/assign-building-ids-use-case';
 import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatmap';
-import { GetLayerGeojsonUseCase } from './use-cases/get-layer-geojson';
-import { GetTableDataParams, GetTableDataOutput, GetTableDataUseCase } from './use-cases/get-table-data';
+import { GetLayerUseCase } from './use-cases/get-layer';
+import { GetTablesParams, GetTablesOutput, GetTablesUseCase } from './use-cases/get-tables';
 import { LoadCsvParams, LoadCsvUseCase } from './use-cases/load-csv';
 import { LoadGeojsonParams, LoadGeojsonUseCase } from './use-cases/load-geojson';
 import { LoadGeoTiffParams, LoadGeoTiffUseCase } from './use-cases/load-geotiff';
@@ -97,7 +97,7 @@ export class AutkDb {
     private loadJsonUseCase?: LoadJsonUseCase;
 
     /** GeoJSON export use case for renderable layer tables. */
-    private getLayerGeojsonUseCase?: GetLayerGeojsonUseCase;
+    private getLayerUseCase?: GetLayerUseCase;
 
     /** Spatial join use case used by higher-level query operations. */
     private spatialJoinUseCase?: SpatialJoinUseCase;
@@ -127,7 +127,7 @@ export class AutkDb {
     private buildHeatmapUseCase?: BuildHeatmapUseCase;
 
     /** Table data reader use case for paginated plain-object row output. */
-    private getTableDataUseCase?: GetTableDataUseCase;
+    private getTablesUseCase?: GetTablesUseCase;
 
     /** Table update use case for replace and keyed update strategies. */
     private updateTableUseCase?: UpdateTableUseCase;
@@ -192,9 +192,9 @@ export class AutkDb {
         this.transformBoundingBoxCoordinatesUseCase = new TransformBoundingBoxCoordinatesUseCase(this.conn);
 
         this.getBoundingBoxFromLayerUseCase = new GetBoundingBoxFromLayerUseCase(this.conn);
-        this.getLayerGeojsonUseCase = new GetLayerGeojsonUseCase(this.conn);
+        this.getLayerUseCase = new GetLayerUseCase(this.conn);
         this.getBoundingBoxFromOsmUseCase = new GetBoundingBoxFromOsmUseCase(this.conn);
-        this.getTableDataUseCase = new GetTableDataUseCase(this.conn);
+        this.getTablesUseCase = new GetTablesUseCase(this.conn);
 
         this.updateTableUseCase = new UpdateTableUseCase(this.db, this.conn);
         this.dropTableUseCase = new DropTableUseCase(this.conn);
@@ -639,14 +639,14 @@ export class AutkDb {
      * map.loadCollection('buildings', { collection: buildings, type: 'buildings' });
      */
     async getLayer(layerTableName: string): Promise<FeatureCollection> {
-        if (!this.db || !this.conn || !this.getLayerGeojsonUseCase)
+        if (!this.db || !this.conn || !this.getLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
         const layerTable = this.tables.find((t) => t.name === layerTableName);
         if (!layerTable) throw new Error(`Table ${layerTableName} not found.`);
         if (!isRenderableTable(layerTable)) throw new Error(`Table ${layerTableName} is not a renderable layer.`);
 
-        const featureCollection = await this.getLayerGeojsonUseCase.exec(layerTable, this.currentWorkspace);
+        const featureCollection = await this.getLayerUseCase.exec(layerTable, this.currentWorkspace);
 
         const workspaceData = this.getCurrentWorkspaceData();
         const osmBoundingBox = this.getOsmBoundingBox();
@@ -746,20 +746,20 @@ export class AutkDb {
      * Reads rows from any table as plain JavaScript objects, with optional pagination.
      *
      * @param params - Table name and optional `limit` / `offset`.
-     * @returns The table data and pagination metadata.
+     * @returns Array of plain objects where each object represents one row.
      * @throws If the database is not initialized or the table is not found.
      * @example
-     * const result = await db.getTableData({ tableName: 'stations', limit: 100 });
-     * console.log(result.data[0]);
+     * const rows = await db.getTables({ tableName: 'stations', limit: 100 });
+     * console.log(rows[0]);
      */
-    async getTableData(params: GetTableDataParams): Promise<GetTableDataOutput> {
-        if (!this.db || !this.conn || !this.getTableDataUseCase)
+    async getTables(params: GetTablesParams): Promise<GetTablesOutput> {
+        if (!this.db || !this.conn || !this.getTablesUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
         const table = this.tables.find((t) => t.name === params.tableName);
         if (!table) throw new Error(`Table ${params.tableName} not found.`);
 
-        return this.getTableDataUseCase.exec({ ...params, workspace: this.currentWorkspace });
+        return this.getTablesUseCase.exec({ ...params, workspace: this.currentWorkspace });
     }
 
     /**

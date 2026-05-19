@@ -1,6 +1,6 @@
 import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import { GetTableDataParams, GetTableDataOutput } from './interfaces';
+import { GetTablesParams, GetTablesOutput } from './interfaces';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 import { toPlain } from '../../utils';
 
@@ -11,7 +11,7 @@ import { toPlain } from '../../utils';
  *
  * @note Requires an active `AsyncDuckDBConnection`.
  */
-export class GetTableDataUseCase {
+export class GetTablesUseCase {
   /** DuckDB connection used to execute queries. */
   private conn: AsyncDuckDBConnection;
 
@@ -31,14 +31,14 @@ export class GetTableDataUseCase {
    * @returns array of plain objects where each object represents one row.
    * @throws {Error} If the table does not exist or the query fails.
    * @example
-   * const useCase = new GetTableDataUseCase(conn);
+   * const useCase = new GetTablesUseCase(conn);
    * const rows = await useCase.exec({ tableName: 'places', limit: 10 });
    * console.log(rows.length); // up to 10
    * @example
    * const rows = await useCase.exec({ tableName: 'places', limit: 5, offset: 10 });
    * // Skips first 10 rows, returns next 5.
    */
-  async exec(params: GetTableDataParams): Promise<GetTableDataOutput> {
+  async exec(params: GetTablesParams): Promise<GetTablesOutput> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
     const qualifiedTableName = `${workspace}.${params.tableName}`;
     let query = `SELECT * FROM ${qualifiedTableName}`;
@@ -52,7 +52,7 @@ export class GetTableDataUseCase {
     }
 
     const result = await this.conn.query(query);
-    return result.toArray().map((row) => toPlain(row.toJSON())) as GetTableDataOutput;
+    return result.toArray().map((row) => toPlain(row.toJSON())) as GetTablesOutput;
   }
 }
 
