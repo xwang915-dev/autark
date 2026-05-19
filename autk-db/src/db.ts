@@ -38,7 +38,7 @@ import { LoadOsmLayerParams, LoadOsmLayerUseCase } from './use-cases/load-osm-la
 import { LoadOsmFromOverpassApiUseCase, LoadOsmParams, OsmLoadTimings } from './use-cases/load-osm-overpass';
 import { LoadOsmFromPbfUseCase } from './use-cases/load-osm-pbf';
 import { OsmProcessingPipeline } from './internal/osm-processing-pipeline/pipeline';
-import { PolygonizeOsmSurfaceUseCase } from './internal/polygonize-osm-surface/use-case';
+import { PolygonizeOsmSurfaceUseCase } from './internal/process-osm/use-case';
 import { RawQueryParams, RawQueryUseCase, RawQueryOutput } from './use-cases/raw-query';
 import { SpatialJoinUseCase, SpatialQueryParams } from './use-cases/spatial-join';
 import { UpdateTableParams, UpdateTableUseCase } from './use-cases/update-table';
