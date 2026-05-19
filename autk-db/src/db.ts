@@ -26,7 +26,7 @@ import { toPlain } from './utils';
 import { DropTableUseCase } from './use-cases/drop-table';
 import { GetLayerBboxUseCase } from './use-cases/get-layer-bbox';
 import { GetOsmBboxUseCase } from './internal/get-osm-bbox/use-case';
-import { AssignBuildingIdsUseCase } from './internal/assign-building-ids/use-case';
+import { AssignIncrementalBuildingIdsUseCase } from './internal/assign-incremental-building-ids/use-case';
 import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatmap';
 import { GetLayerUseCase } from './use-cases/get-layer';
 import { GetTablesParams, GetTablesOutput, GetTablesUseCase } from './use-cases/get-tables';
@@ -88,8 +88,8 @@ export class AutkDb {
     /** GeoJSON layer loading use case bound to the active database connection. */
     private loadGeojsonUseCase?: LoadGeojsonUseCase;
 
-    /** Building identifier assignment use case for grouped building outputs. */
-    private assignBuildingIdsUseCase?: AssignBuildingIdsUseCase;
+    /** Building identifier assignment use case for per-feature GeoJSON building inputs. */
+    private assignIncrementalBuildingIdsUseCase?: AssignIncrementalBuildingIdsUseCase;
 
     /** JSON loading use case bound to the active database connection. */
     private loadJsonUseCase?: LoadJsonUseCase;
@@ -178,7 +178,7 @@ export class AutkDb {
         this.loadGeojsonUseCase = new LoadGeojsonUseCase(this.db, this.conn);
         this.loadGeoTiffUseCase = new LoadGeoTiffUseCase(this.db, this.conn);
 
-        this.assignBuildingIdsUseCase = new AssignBuildingIdsUseCase(this.db, this.conn);
+        this.assignIncrementalBuildingIdsUseCase = new AssignIncrementalBuildingIdsUseCase(this.conn);
         this.polygonizeOsmSurfaceUseCase = new PolygonizeOsmSurfaceUseCase(this.db, this.conn);
 
         this.spatialJoinUseCase = new SpatialJoinUseCase(this.conn);
@@ -484,7 +484,7 @@ export class AutkDb {
             !this.db ||
             !this.conn ||
             !this.loadGeojsonUseCase ||
-            !this.assignBuildingIdsUseCase ||
+            !this.assignIncrementalBuildingIdsUseCase ||
             !this.getLayerBboxUseCase
         )
             throw new Error('Database not initialized. Please call init() first.');
@@ -506,7 +506,7 @@ export class AutkDb {
         }
 
         if (params.layerType === 'buildings') {
-            const columns = await this.assignBuildingIdsUseCase.exec({
+            const columns = await this.assignIncrementalBuildingIdsUseCase.exec({
                 tableName: table.name,
                 workspace: this.currentWorkspace,
             });
