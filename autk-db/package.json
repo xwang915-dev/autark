@@ -1,6 +1,6 @@
 {
   "name": "@urban-toolkit/autk-db",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "keywords": [
     "urban",
     "data management"
@@ -15,10 +15,10 @@
     "dist"
   ],
   "module": "./dist/autk-db.js",
-  "types": "./dist/src/main.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/src/main.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/autk-db.js"
     }
   },
