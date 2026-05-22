@@ -22,6 +22,7 @@ typecheck: build
 		"cd usecases && npx tsc --noEmit --skipLibCheck"
 
 build:
+	cd autk-core && npm run build
 	$(CONCURRENTLY) \
 		"cd autk-map && npm run build" \
 		"cd autk-db && npm run build" \
@@ -31,6 +32,7 @@ build:
 
 docs:
 	$(CONCURRENTLY) \
+		"cd autk-core && npm run doc" \
 		"cd autk-map && npm run doc" \
 		"cd autk-db && npm run doc" \
 		"cd autk-plot && npm run doc" \
@@ -55,6 +57,7 @@ dev:
 	npm install
 	make build
 	$(CONCURRENTLY) \
+		"cd autk-core && npm run dev-build" \
 		"cd autk-map && npm run dev-build" \
 		"cd autk-db && npm run dev-build" \
 		"cd autk-plot && npm run dev-build" \

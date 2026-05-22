@@ -10,7 +10,7 @@
 import {
     TypedArray,
     TypedArrayConstructor,
-} from 'autk-core';
+} from '@urban-toolkit/autk-core';
 
 /**
  * Metadata for a global uniform exposed to the generated WGSL shader.

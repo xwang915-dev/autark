@@ -7,7 +7,7 @@
 
 /// <reference types="@webgpu/types" />
 
-import type { LayerGeometry } from 'autk-core';
+import type { LayerGeometry } from '@urban-toolkit/autk-core';
 
 import type { RenderLayer } from './api';
 

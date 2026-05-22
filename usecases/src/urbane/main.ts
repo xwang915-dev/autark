@@ -5,7 +5,7 @@ import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeGpgpu, ComputeRender } from '@urban-toolkit/autk-compute';
 import { AutkPlot, PlotEvent } from '@urban-toolkit/autk-plot';
 import { AutkMap, MapEvent } from '@urban-toolkit/autk-map';
-import { ColorMapDomainStrategy } from 'autk-core';
+import { ColorMapDomainStrategy } from '@urban-toolkit/autk-core';
 
 const URL = (import.meta as any).env.BASE_URL;
 

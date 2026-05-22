@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          package_dirs=(autk-map autk-db autk-plot autk-compute autk)
+          package_dirs=(autk-core autk-map autk-db autk-plot autk-compute autk)
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

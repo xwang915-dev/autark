@@ -15,7 +15,7 @@ import {
     Camera,
     computeGeometryCentroid,
     TriangulatorBuildingWithWindows,
-} from 'autk-core';
+} from '@urban-toolkit/autk-core';
 
 import type { RenderViewSampling, RenderViewpointStrategy, RenderViewpoints } from './api';
 

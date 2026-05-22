@@ -26,7 +26,7 @@ export enum MouseStatus {
   DRAG = 'mouseDrag',
 }
 
-import type { SelectionData } from 'autk-core';
+import type { SelectionData } from '@urban-toolkit/autk-core';
 
 /**
  * Payload emitted for feature-picking events.

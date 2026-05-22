@@ -24,7 +24,7 @@ import {
     TriangulatorPolygons,
     TriangulatorPolylines,
     computeOrigin,
-} from 'autk-core';
+} from '@urban-toolkit/autk-core';
 
 import type { RenderAggregation, RenderLayer, RenderPipelineParams } from './api';
 

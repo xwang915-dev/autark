@@ -23,10 +23,10 @@ export {
 } from './viewpoint';
 
 /** Building-window triangulation helper from `autk-core`. */
-export { TriangulatorBuildingWithWindows } from 'autk-core';
+export { TriangulatorBuildingWithWindows } from '@urban-toolkit/autk-core';
 
 /** Building-window layout types from `autk-core`. */
-export type { BuildingWindowLayoutEntry, BuildingWindowLayoutResult } from 'autk-core';
+export type { BuildingWindowLayoutEntry, BuildingWindowLayoutResult } from '@urban-toolkit/autk-core';
 
 /** Public pipeline parameter types. */
 export type {
@@ -43,4 +43,4 @@ export type {
     ViewProjectionParams,
     TypedArray,
     TypedArrayConstructor,
-} from 'autk-core';
+} from '@urban-toolkit/autk-core';

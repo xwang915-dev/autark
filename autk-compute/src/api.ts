@@ -8,7 +8,7 @@
 
 import { FeatureCollection } from 'geojson';
 
-import { LayerType } from 'autk-core';
+import { LayerType } from '@urban-toolkit/autk-core';
 
 // ── Render pipeline ───────────────────────────────────────────────────────────
 

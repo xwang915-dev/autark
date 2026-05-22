@@ -3,7 +3,7 @@ import { Feature, FeatureCollection, GeoJsonProperties, Point } from 'geojson';
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeRender } from '@urban-toolkit/autk-compute';
 import { AutkMap, MapEvent } from '@urban-toolkit/autk-map';
-import { ColorMapDomainStrategy } from 'autk-core';
+import { ColorMapDomainStrategy } from '@urban-toolkit/autk-core';
 
 export class ComputeRenderOsmVisibility {
     protected map!: AutkMap;

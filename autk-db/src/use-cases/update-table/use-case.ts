@@ -1,6 +1,6 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { FeatureCollection } from 'geojson';
-import { isFeatureCollection } from 'autk-core';
+import { isFeatureCollection } from '@urban-toolkit/autk-core';
 
 import { isVectorTable, Table } from '../../interfaces';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';

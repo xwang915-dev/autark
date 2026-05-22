@@ -1,7 +1,7 @@
 // Common interface for all examples
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { AutkMap, MapStyle } from '@urban-toolkit/autk-map';
-import { CameraMotion, ColorMapDomainStrategy, ColorMapInterpolator } from 'autk-core';
+import { CameraMotion, ColorMapDomainStrategy, ColorMapInterpolator } from '@urban-toolkit/autk-core';
 import { ComputeGpgpu } from '@urban-toolkit/autk-compute';
 import { FeatureCollection, Geometry, GeoJsonProperties } from 'geojson';
 

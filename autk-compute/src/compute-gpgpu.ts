@@ -12,7 +12,7 @@ import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson
 import {
     valueAtPath,
     TypedArray,
-} from 'autk-core';
+} from '@urban-toolkit/autk-core';
 
 import { GpuPipeline } from './compute-pipeline';
 

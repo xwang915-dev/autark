@@ -1,5 +1,5 @@
 import { ComputeRender } from '@urban-toolkit/autk-compute';
-import { ColorMapDomainStrategy } from 'autk-core';
+import { ColorMapDomainStrategy } from '@urban-toolkit/autk-core';
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { AutkMap } from '@urban-toolkit/autk-map';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';

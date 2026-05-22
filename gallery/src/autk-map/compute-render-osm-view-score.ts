@@ -5,7 +5,7 @@ import {
 import {
     ColorMapDomainStrategy,
     TriangulatorBuildingWithWindows,
-} from 'autk-core';
+} from '@urban-toolkit/autk-core';
 
 import {
     AutkMap,

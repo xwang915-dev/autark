@@ -6,7 +6,7 @@
  */
 
 /** Shared geometry and layer metadata types used throughout the database package. */
-export type { BoundingBox, LayerType } from 'autk-core';
+export type { BoundingBox, LayerType } from '@urban-toolkit/autk-core';
 
 /** Shared `autk-core` helpers used while loading and classifying spatial data. */
-export { computeIntersectingClusterIds, mapGeometryTypeToLayerType } from 'autk-core';
+export { computeIntersectingClusterIds, mapGeometryTypeToLayerType } from '@urban-toolkit/autk-core';
