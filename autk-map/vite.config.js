@@ -6,6 +6,11 @@ import glsl from 'vite-plugin-glsl';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@urban-toolkit/autk-core': resolve(__dirname, '../autk-core/src/index.ts'),
+    },
+  },
   plugins: [glsl(), dts()],
   build: {
     lib: {

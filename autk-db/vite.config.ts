@@ -13,6 +13,11 @@ const duckdbFiles = [
 ];
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@urban-toolkit/autk-core': resolve(__dirname, '../autk-core/src/index.ts'),
+    },
+  },
   plugins: [
     dts(),
     {

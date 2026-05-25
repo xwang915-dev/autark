@@ -2,6 +2,8 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
+const isWatch = process.argv.includes('--watch');
+
 const externalPackages = [
   '@urban-toolkit/autk-map',
   '@urban-toolkit/autk-db',
@@ -23,7 +25,7 @@ export default defineConfig({
       formats: ['es'],
     },
     copyPublicDir: false,
-    emptyOutDir: true,
+    emptyOutDir: !isWatch,
     sourcemap: true,
     rollupOptions: {
       external: externalPackages,

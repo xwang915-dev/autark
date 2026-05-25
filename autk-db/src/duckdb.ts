@@ -1,4 +1,8 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
+import mvpModuleUrl from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
+import mvpWorkerUrl from './vendor/duckdb-browser-mvp.worker.js?url';
+import ehModuleUrl from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
+import ehWorkerUrl from './vendor/duckdb-browser-eh.worker.js?url';
 
 /**
  * Browser-specific DuckDB-Wasm bundle definitions used for runtime selection.
@@ -7,12 +11,12 @@ import * as duckdb from '@duckdb/duckdb-wasm';
  */
 const BROWSER_BUNDLES: duckdb.DuckDBBundles = {
   mvp: {
-    mainModule: new URL(/* @vite-ignore */ './duckdb-mvp.wasm', import.meta.url).href,
-    mainWorker: new URL(/* @vite-ignore */ './duckdb-browser-mvp.worker.js', import.meta.url).href,
+    mainModule: mvpModuleUrl,
+    mainWorker: mvpWorkerUrl,
   },
   eh: {
-    mainModule: new URL(/* @vite-ignore */ './duckdb-eh.wasm', import.meta.url).href,
-    mainWorker: new URL(/* @vite-ignore */ './duckdb-browser-eh.worker.js', import.meta.url).href,
+    mainModule: ehModuleUrl,
+    mainWorker: ehWorkerUrl,
   },
 };
 

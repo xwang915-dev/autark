@@ -1,102 +1,68 @@
-import { Urbane } from './main';
+import type { UrbaneApp } from './app';
+import { SCORE_FIELD, SKY_EXPOSURE_FIELD } from './analysis';
 
-// ── Loading overlay ───────────────────────────────────────────────────────────
-
-function setLoadingState(message: string, note?: string): void {
-    const text = document.getElementById('loading-text');
-    const noteEl = document.getElementById('loading-note');
-    if (text) text.textContent = message;
-    if (noteEl) noteEl.textContent = note ?? '';
+export function initUi(app: UrbaneApp): void {
+    initDrillDownButton(app);
+    initThematicSelect(app);
+    initWeightSliders(app);
+    initPlotPanel();
 }
 
-function hideLoading(): void {
-    document.getElementById('loading-overlay')?.classList.add('hidden');
-}
-
-function showError(message: string, note?: string): void {
-    const overlay = document.getElementById('loading-overlay');
-    const title = document.getElementById('loading-title');
-    const text = document.getElementById('loading-text');
-    const noteEl = document.getElementById('loading-note');
-    overlay?.classList.remove('hidden');
-    overlay?.classList.add('error');
-    if (title) title.textContent = 'Loading Error';
-    if (text) text.textContent = message;
-    if (noteEl) noteEl.textContent = note ?? 'Please reload the page and try again.';
-}
-
-// Make loading helpers available as globals so the Urbane class can call them
-// via the `declare` statements in main.ts.
-(window as any).setLoadingState = setLoadingState;
-(window as any).hideLoading = hideLoading;
-(window as any).showError = showError;
-
-// ── Drill-down button ─────────────────────────────────────────────────────────
-
-function initDrillDownButton(urbane: Urbane): void {
+function initDrillDownButton(app: UrbaneApp): void {
     const btn = document.querySelector('#levelBtn') as HTMLButtonElement;
     const iconDown = document.querySelector('#levelBtnDown') as HTMLElement;
     const iconUp = document.querySelector('#levelBtnUp') as HTMLElement;
     const thematicSelect = document.querySelector('#thematicSelect') as HTMLSelectElement;
 
+    updateLevelButtonState(app, btn, iconDown, iconUp);
+
     btn.addEventListener('click', async () => {
         btn.disabled = true;
-        await urbane.drillDown(thematicSelect.value);
 
-        if (urbane.currentLevel === 'active_buildings') {
-            iconDown.style.display = 'none';
-            iconUp.style.display = '';
-            btn.title = 'Back to neighborhoods';
-        } else {
-            iconDown.style.display = '';
-            iconUp.style.display = 'none';
-            btn.title = 'Drill into buildings';
-        }
+        if (app.currentLevel === 'neighborhoods') await app.drillDown(thematicSelect.value);
+        else await app.drillUp(thematicSelect.value);
 
+        updateLevelButtonState(app, btn, iconDown, iconUp);
         btn.disabled = false;
     });
 }
 
-// ── Thematic select ───────────────────────────────────────────────────────────
-
-function initThematicSelect(urbane: Urbane): void {
+function initThematicSelect(app: UrbaneApp): void {
     const select = document.querySelector('#thematicSelect') as HTMLSelectElement;
 
-    [{ value: 'none', text: 'None' }, { value: 'compute.score', text: 'Score' }].forEach(({ value, text }) => {
+    [{ value: 'none', text: 'None' }, { value: SCORE_FIELD, text: 'Score' }].forEach(({ value, text }) => {
         const opt = document.createElement('option');
         opt.value = value;
         opt.textContent = text;
         select.appendChild(opt);
     });
 
-    urbane.datasets.forEach(dataset => {
+    app.datasets.forEach((dataset) => {
         const opt = document.createElement('option');
         opt.value = `sjoin.count.${dataset}`;
-        opt.textContent = dataset.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        opt.textContent = dataset.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
         select.appendChild(opt);
     });
 
-    const svfOpt = document.createElement('option');
-    svfOpt.value = 'sjoin.avg.skyExposure';
-    svfOpt.textContent = 'Sky Exposure';
-    select.appendChild(svfOpt);
+    const skyOpt = document.createElement('option');
+    skyOpt.value = SKY_EXPOSURE_FIELD;
+    skyOpt.textContent = 'Sky Exposure';
+    select.appendChild(skyOpt);
 
-    select.addEventListener('change', () => urbane.updateThematicData(select.value));
+    select.addEventListener('change', () => app.updateThematic(select.value));
 }
 
-// ── Weight sliders ────────────────────────────────────────────────────────────
-
-function initWeightSliders(urbane: Urbane): void {
+function initWeightSliders(app: UrbaneApp): void {
     const slidersContainer = document.querySelector('#weightsSliders') as HTMLElement;
     const panel = document.querySelector('#weightsPanel') as HTMLElement;
 
-    const allWeights = [...urbane.weights, urbane.skyExposureWeight];
+    const allWeights = [...app.weights, app.skyExposureWeight];
     const allLabels = [
-        ...urbane.datasets.map(d => d.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())),
+        ...app.datasets.map((dataset) => dataset.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())),
         'Sky Exposure',
     ];
 
-    allWeights.forEach((weight, i) => {
+    allWeights.forEach((weight, index) => {
         const col = document.createElement('div');
         col.className = 'weight-col';
 
@@ -113,7 +79,7 @@ function initWeightSliders(urbane: Urbane): void {
         slider.className = 'weight-slider';
         slider.addEventListener('input', () => {
             const allSliders = [...document.querySelectorAll<HTMLInputElement>('.weight-slider')];
-            const othersSum = allSliders.filter(s => s !== slider).reduce((sum, s) => sum + +s.value, 0);
+            const othersSum = allSliders.filter((item) => item !== slider).reduce((sum, item) => sum + +item.value, 0);
             const maxVal = +Math.max(0, 1 - othersSum).toFixed(2);
             if (+slider.value > maxVal) slider.value = String(maxVal);
             valueLabel.textContent = (+slider.value).toFixed(2);
@@ -121,7 +87,7 @@ function initWeightSliders(urbane: Urbane): void {
 
         const nameLabel = document.createElement('span');
         nameLabel.className = 'weight-label';
-        nameLabel.textContent = allLabels[i];
+        nameLabel.textContent = allLabels[index];
 
         col.append(valueLabel, slider, nameLabel);
         slidersContainer.appendChild(col);
@@ -131,70 +97,73 @@ function initWeightSliders(urbane: Urbane): void {
     computeBtn.id = 'weightsCompute';
     computeBtn.textContent = 'Compute Score';
     computeBtn.addEventListener('click', () => {
-        const weights = [...document.querySelectorAll<HTMLInputElement>('.weight-slider')].map(s => +s.value);
-        const select = document.querySelector('#thematicSelect') as HTMLSelectElement;
-        urbane.updateWeights(weights, select.value);
+        const weights = [...document.querySelectorAll<HTMLInputElement>('.weight-slider')].map((slider) => +slider.value);
+        app.updateWeights(weights, (document.querySelector('#thematicSelect') as HTMLSelectElement).value);
     });
     panel.appendChild(computeBtn);
 }
-
-// ── Floating plot panel ───────────────────────────────────────────────────────
 
 function initPlotPanel(): void {
     const plot = document.querySelector('#plot') as HTMLElement;
     const bar = document.querySelector('#plotBar') as HTMLElement;
     const toggle = document.querySelector('#plotToggle') as HTMLElement;
-    let startX = 0, startY = 0;
+    let startX = 0;
+    let startY = 0;
 
     plot.classList.add('hidden-plot');
     toggle.addEventListener('click', () => plot.classList.toggle('hidden-plot'));
 
-    bar.addEventListener('pointerdown', e => {
-        startX = e.clientX;
-        startY = e.clientY;
-        bar.setPointerCapture(e.pointerId);
+    bar.addEventListener('pointerdown', (event) => {
+        startX = event.clientX;
+        startY = event.clientY;
+        bar.setPointerCapture(event.pointerId);
     });
 
-    bar.addEventListener('pointermove', e => {
-        if (!bar.hasPointerCapture(e.pointerId)) return;
-        plot.style.left = plot.offsetLeft + (e.clientX - startX) + 'px';
-        plot.style.top = plot.offsetTop + (e.clientY - startY) + 'px';
-        startX = e.clientX;
-        startY = e.clientY;
+    bar.addEventListener('pointermove', (event) => {
+        if (!bar.hasPointerCapture(event.pointerId)) return;
+        plot.style.left = plot.offsetLeft + (event.clientX - startX) + 'px';
+        plot.style.top = plot.offsetTop + (event.clientY - startY) + 'px';
+        startX = event.clientX;
+        startY = event.clientY;
     });
 
-    bar.addEventListener('pointerup', e => bar.releasePointerCapture(e.pointerId));
+    bar.addEventListener('pointerup', (event) => bar.releasePointerCapture(event.pointerId));
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-function initUi(urbane: Urbane): void {
-    initDrillDownButton(urbane);
-    initThematicSelect(urbane);
-    initWeightSliders(urbane);
-    initPlotPanel();
+export function setLoadingState(message: string, note?: string): void {
+    const text = document.getElementById('loading-text');
+    const noteEl = document.getElementById('loading-note');
+    if (text) text.textContent = message;
+    if (noteEl) noteEl.textContent = note ?? '';
 }
 
-async function main(): Promise<void> {
-    try {
-        const canvas = document.querySelector('canvas');
-        const plotDivParallel = document.querySelector('#plotBodyParallel') as HTMLElement;
-        const plotDivTable = document.querySelector('#plotBodyTable') as HTMLElement;
+export function hideLoading(): void {
+    document.getElementById('loading-overlay')?.classList.add('hidden');
+}
 
-        if (!(canvas instanceof HTMLCanvasElement) || !plotDivParallel || !plotDivTable) {
-            throw new Error('Canvas or plot body element not found.');
-        }
+export function showError(message: string, note?: string): void {
+    const overlay = document.getElementById('loading-overlay');
+    const title = document.getElementById('loading-title');
+    const text = document.getElementById('loading-text');
+    const noteEl = document.getElementById('loading-note');
+    overlay?.classList.remove('hidden');
+    overlay?.classList.add('error');
+    if (title) title.textContent = 'Loading Error';
+    if (text) text.textContent = message;
+    if (noteEl) noteEl.textContent = note ?? 'Please reload the page and try again.';
+}
 
-        const urbane = new Urbane();
-        await urbane.run(canvas, plotDivParallel, plotDivTable);
 
-        (window as any).urbane = urbane;
-        hideLoading();
-        initUi(urbane);
-    } catch (error) {
-        console.error(error);
-        showError('Failed to load the Urbane case study.', 'Please verify the dataset paths and reload the page.');
+function updateLevelButtonState(app: UrbaneApp, btn: HTMLButtonElement, iconDown: HTMLElement, iconUp: HTMLElement): void {
+    if (app.currentLevel === 'active_buildings') {
+        iconDown.style.display = 'none';
+        iconUp.style.display = '';
+        btn.title = 'Back to neighborhoods';
+        return;
     }
-}
 
-main();
+    iconDown.style.display = '';
+    iconUp.style.display = 'none';
+    btn.title = 'Drill into buildings';
+}
