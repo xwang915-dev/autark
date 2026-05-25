@@ -1,8 +1,8 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import mvpModuleUrl from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
-import mvpWorkerUrl from './vendor/duckdb-browser-mvp.worker.js?url';
+import mvpWorkerUrl from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
 import ehModuleUrl from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
-import ehWorkerUrl from './vendor/duckdb-browser-eh.worker.js?url';
+import ehWorkerUrl from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 
 /**
  * Browser-specific DuckDB-Wasm bundle definitions used for runtime selection.

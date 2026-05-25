@@ -3,14 +3,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import fs from 'fs';
-
-const duckdbFiles = [
-  'duckdb-mvp.wasm',
-  'duckdb-browser-mvp.worker.js',
-  'duckdb-eh.wasm',
-  'duckdb-browser-eh.worker.js',
-];
 
 export default defineConfig({
   resolve: {
@@ -18,25 +10,7 @@ export default defineConfig({
       '@urban-toolkit/autk-core': resolve(__dirname, '../autk-core/src/index.ts'),
     },
   },
-  plugins: [
-    dts(),
-    {
-      name: 'copy-duckdb-dist',
-      closeBundle() {
-        const src = resolve(require.resolve('@duckdb/duckdb-wasm'), '..');
-        const dst = resolve(__dirname, 'dist');
-        for (const file of duckdbFiles) {
-          if (file.endsWith('.js')) {
-            const content = fs.readFileSync(`${src}/${file}`, 'utf8')
-              .replace(/^\/\/# sourceMappingURL=.+$/m, '');
-            fs.writeFileSync(`${dst}/${file}`, content);
-          } else {
-            fs.copyFileSync(`${src}/${file}`, `${dst}/${file}`);
-          }
-        }
-      },
-    },
-  ],
+  plugins: [dts()],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
