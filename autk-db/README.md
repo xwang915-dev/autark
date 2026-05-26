@@ -74,7 +74,6 @@ console.log(parcels.type); // 'polygons'
 * `setWorkspace(name)`, `getWorkspaces()`, `getCurrentWorkspace()`: Manage isolated database schemas.
 * `loadOsm(params)`: Loads OpenStreetMap data from Overpass API or PBF-backed workflows.
 * `loadCsv(params)`, `loadJson(params)`: Imports tabular or JSON data.
-* `loadOsmLayer(params)`: Extracts standard urban layers from loaded OSM data.
 * `loadGeojson(params)`: Imports custom GeoJSON layers.
 * `loadGeoTiff(params)`, `getGeoTiffLayer(tableName)`: Imports and exports GeoTIFF-derived raster layers.
 * `getLayer(layerTableName)`: Exports a layer table as a GeoJSON `FeatureCollection`.

@@ -47,7 +47,6 @@ export {
   isRasterTable,
 } from './interfaces';
 
-export type { Layer, LoadOsmLayerParams } from './use-cases/load-osm-layer';
 export type { LoadGeoTiffParams } from './use-cases/load-geotiff';
 export type { GetTablesParams, GetTablesOutput } from './use-cases/get-tables';
 export type {

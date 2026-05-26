@@ -161,7 +161,6 @@ export class AutkDb {
             tables: [],
             coordinateFormat: DEFAULT_WORKSPACE_COORDINATE_FORMAT,
             workspaceBoundingBox: undefined,
-            osmBoundingBox: undefined,
         });
 
         this.osmProcessingPipeline = new OsmProcessingPipeline(this.db, this.conn);
@@ -213,7 +212,6 @@ export class AutkDb {
                 tables: [],
                 coordinateFormat: DEFAULT_WORKSPACE_COORDINATE_FORMAT,
                 workspaceBoundingBox: undefined,
-                osmBoundingBox: undefined,
             });
         }
 
@@ -302,12 +300,14 @@ export class AutkDb {
 
         if (params.autoLoadLayers) {
             const boundaryTableName = `${params.outputTableName}_boundaries`;
-            workspaceData.osmBoundingBox = await this.getOsmBboxUseCase.exec({
+            const osmBoundingBox = await this.getOsmBboxUseCase.exec({
                 osmTableName: boundaryTableName,
                 workspace: this.currentWorkspace,
                 coordinateFormat: targetCrs,
             });
-            workspaceData.workspaceBoundingBox = workspaceData.osmBoundingBox;
+            if (!workspaceData.workspaceBoundingBox) {
+                workspaceData.workspaceBoundingBox = osmBoundingBox;
+            }
 
             let surfaceLayerName: string | null = null;
             const clippableLayerNames: string[] = [];
@@ -321,7 +321,7 @@ export class AutkDb {
                     layer,
                 };
 
-                layerParams.boundingBox = shouldCropToBbox ? workspaceData.osmBoundingBox : undefined;
+                layerParams.boundingBox = shouldCropToBbox ? osmBoundingBox : undefined;
 
                 const t0 = performance.now();
                 const layerTable = await this.loadOsmLayer({ ...layerParams, workspaceCoordinateFormat: targetCrs });
@@ -341,6 +341,7 @@ export class AutkDb {
                     );
                     const tableIndex = workspaceData.tables.findIndex((t) => t.name === layerTable.name);
                     if (tableIndex !== -1) workspaceData.tables[tableIndex] = updatedTable;
+                    await this.refreshStoredBoundingBox(layerTable.name);
                     surfaceLayerName = layerTable.name;
                 } else {
                     clippableLayerNames.push(layerTable.name);
@@ -351,6 +352,7 @@ export class AutkDb {
                 for (const layerName of clippableLayerNames) {
                     const cropGeometry = !layerName.endsWith('_buildings');
                     await this.clipLayerToSurface(layerName, surfaceLayerName, this.currentWorkspace, cropGeometry);
+                    await this.refreshStoredBoundingBox(layerName);
                 }
             }
 
@@ -394,7 +396,7 @@ export class AutkDb {
         });
         this.registerTable(table);
 
-        return table;
+        return this.initializeSpatialMetadata(table);
     }
 
     /**
@@ -424,22 +426,19 @@ export class AutkDb {
         });
         this.registerTable(table);
 
-        return table;
+        return this.initializeSpatialMetadata(table);
     }
 
     /**
-     * Extracts a thematic layer (roads, buildings, parks, water, surface) from a loaded OSM table.
+     * Extracts a thematic layer (roads, buildings, parks, water, surface) from a loaded raw OSM table.
+     *
+     * Internal helper used by `loadOsm()`.
      *
      * @param params - OSM table name, layer type, and optional bounding box for cropping.
      * @returns The created layer table metadata.
      * @throws If the database is not initialized, the OSM table is missing, or the table is not a raw OSM table.
-     * @example
-     * const buildings = await db.loadOsmLayer({
-     *   osmInputTableName: 'manhattan',
-     *   layer: 'buildings',
-     * });
      */
-    async loadOsmLayer(params: LoadOsmLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
+    private async loadOsmLayer(params: LoadOsmLayerParams & { workspaceCoordinateFormat?: string }): Promise<OsmLayerTable> {
         if (!this.db || !this.conn || !this.loadOsmLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
@@ -456,11 +455,11 @@ export class AutkDb {
         });
         this.registerTable(table);
 
-        return table;
+        return this.initializeSpatialMetadata(table);
     }
 
     /**
-     * Loads a GeoJSON FeatureCollection as a spatial layer, optionally auto-clipping to the OSM bounding box.
+     * Loads a GeoJSON FeatureCollection as a spatial layer, optionally auto-clipping to the workspace bbox when OSM data is present.
      *
      * When `layerType` is `'buildings'`, computes `building_id` by clustering overlapping geometries.
      *
@@ -486,32 +485,27 @@ export class AutkDb {
         const workspaceData = this.getCurrentWorkspaceData();
         const table = await this.loadGeojsonUseCase.exec({
             ...params,
-            boundingBox: workspaceData.osmBoundingBox,
+            boundingBox: this.workspaceUsesOsmBounds() ? workspaceData.workspaceBoundingBox : undefined,
             workspace: this.currentWorkspace,
             workspaceCoordinateFormat: workspaceData.coordinateFormat,
         });
         this.registerTable(table);
 
-        if (!workspaceData.workspaceBoundingBox) {
-            workspaceData.workspaceBoundingBox = await this.getLayerBboxUseCase.exec({
-                layerTableName: table.name,
-                workspace: this.currentWorkspace,
-            });
-        }
+        const tableWithSpatialMetadata = await this.initializeSpatialMetadata(table);
 
         if (params.layerType === 'buildings') {
-            const qualifiedTableName = `${this.currentWorkspace}.${table.name}`;
-            const hasBuildingId = table.columns.some((column) => column.name === 'building_id');
+            const qualifiedTableName = `${this.currentWorkspace}.${tableWithSpatialMetadata.name}`;
+            const hasBuildingId = tableWithSpatialMetadata.columns.some((column) => column.name === 'building_id');
             if (!hasBuildingId) {
                 await this.conn.query(`ALTER TABLE ${qualifiedTableName} ADD COLUMN building_id BIGINT`);
             }
             await this.conn.query(`UPDATE ${qualifiedTableName} SET building_id = CAST(id AS BIGINT)`);
 
             const describeUpdatedTableResponse = await this.conn.query(`DESCRIBE ${qualifiedTableName}`);
-            table.columns = getColumnsFromDuckDbTableDescribe(describeUpdatedTableResponse.toArray());
+            tableWithSpatialMetadata.columns = getColumnsFromDuckDbTableDescribe(describeUpdatedTableResponse.toArray());
         }
 
-        return table;
+        return tableWithSpatialMetadata;
     }
 
     /**
@@ -538,7 +532,7 @@ export class AutkDb {
         });
         this.registerTable(table);
 
-        return table;
+        return this.initializeSpatialMetadata(table);
     }
 
     /**
@@ -615,7 +609,7 @@ export class AutkDb {
     /**
      * Exports a loaded layer as a GeoJSON FeatureCollection with an automatically computed bounding box.
      *
-     * The bbox is resolved from the OSM boundingBox, then the workspace bounds, then the layer's own bounds.
+     * The bbox is resolved from the immutable workspace bounds, then the layer's own bounds.
      *
      * @param layerTableName - Name of the layer table to export.
      * @returns A FeatureCollection with a `bbox` property.
@@ -635,10 +629,7 @@ export class AutkDb {
         const featureCollection = await this.getLayerUseCase.exec(layerTable, this.currentWorkspace);
 
         const workspaceData = this.getCurrentWorkspaceData();
-        const osmBoundingBox = this.getOsmBoundingBox();
-        if (osmBoundingBox) {
-            featureCollection.bbox = osmBoundingBox;
-        } else if (workspaceData.workspaceBoundingBox) {
+        if (workspaceData.workspaceBoundingBox) {
             featureCollection.bbox = [
                 workspaceData.workspaceBoundingBox.minLon,
                 workspaceData.workspaceBoundingBox.minLat,
@@ -656,29 +647,6 @@ export class AutkDb {
         }
 
         return featureCollection;
-    }
-
-    /**
-     * Returns the cached OSM bounding box for the active workspace.
-     *
-     * The values are already transformed into the workspace CRS when OSM loading has populated the extent cache.
-     *
-     * @returns `[minLon, minLat, maxLon, maxLat]` in the workspace CRS, or `null` if no OSM extent is available.
-     * @throws If the active workspace is missing from the internal registry.
-     * @example
-     * const bbox = db.getOsmBoundingBox();
-     * if (bbox) console.log(`Bounds: ${bbox[0]} to ${bbox[2]}`);
-     */
-    getOsmBoundingBox(): [number, number, number, number] | null {
-        const workspaceData = this.getCurrentWorkspaceData();
-        if (!workspaceData.osmBoundingBox) return null;
-
-        return [
-            workspaceData.osmBoundingBox.minLon,
-            workspaceData.osmBoundingBox.minLat,
-            workspaceData.osmBoundingBox.maxLon,
-            workspaceData.osmBoundingBox.maxLat,
-        ]
     }
 
     /**
@@ -705,10 +673,16 @@ export class AutkDb {
             );
         }
 
-        return this.getLayerBboxUseCase.exec({
+        if (layerTable.boundingBox) {
+            return layerTable.boundingBox;
+        }
+
+        const boundingBox = await this.getLayerBboxUseCase.exec({
             layerTableName: layerName,
             workspace: this.currentWorkspace,
         });
+        layerTable.boundingBox = boundingBox;
+        return boundingBox;
     }
 
     /**
@@ -779,7 +753,7 @@ export class AutkDb {
             workspaceData.tables[tableIndex] = result.table;
         }
 
-        return result.table;
+        return this.refreshStoredBoundingBox(params.tableName);
     }
 
     /**
@@ -827,7 +801,7 @@ export class AutkDb {
 
         if (params.output.type === 'CREATE_TABLE') {
             this.registerTable(result as Table);
-            return result as Table;
+            return this.initializeSpatialMetadata(result as Table);
         }
 
         return result as unknown as T;
@@ -879,7 +853,7 @@ export class AutkDb {
         const table = await this.buildHeatmapUseCase.exec(params, workspaceData.tables, workspaceData.workspaceBoundingBox, this.currentWorkspace);
         this.registerTable(table);
 
-        return table;
+        return this.refreshStoredBoundingBox(table.name);
     }
 
     // ---- Private methods
@@ -901,6 +875,56 @@ export class AutkDb {
             throw new Error(`Workspace '${this.currentWorkspace}' not found. This should not happen.`);
         }
         return data;
+    }
+
+    /**
+     * Returns whether the active workspace extent was established from OSM-backed data.
+     */
+    private workspaceUsesOsmBounds(): boolean {
+        return this.tables.some((table) => table.source === 'osm' && table.type !== undefined);
+    }
+
+    /**
+     * Returns whether the table currently stores geometry data.
+     */
+    private tableHasGeometry(table: Table): boolean {
+        return table.columns.some((column) => column.type === 'GEOMETRY');
+    }
+
+    /**
+     * Computes and stores the bounding box for a geometry-bearing table.
+     */
+    private async refreshStoredBoundingBox(tableName: string): Promise<Table> {
+        if (!this.getLayerBboxUseCase) {
+            throw new Error('Database not initialized. Please call init() first.');
+        }
+
+        const workspaceData = this.getCurrentWorkspaceData();
+        const table = workspaceData.tables.find((item) => item.name === tableName);
+        if (!table) throw new Error(`Table ${tableName} not found.`);
+        if (!this.tableHasGeometry(table)) return table;
+
+        table.boundingBox = await this.getLayerBboxUseCase.exec({
+            layerTableName: tableName,
+            workspace: this.currentWorkspace,
+        });
+
+        return table;
+    }
+
+    /**
+     * Initializes immutable workspace bounds from the first geometry-bearing table and stores the table bbox.
+     */
+    private async initializeSpatialMetadata<T extends Table>(table: T): Promise<T> {
+        if (!this.tableHasGeometry(table)) return table;
+
+        const tableWithBoundingBox = await this.refreshStoredBoundingBox(table.name) as T;
+        const workspaceData = this.getCurrentWorkspaceData();
+        if (!workspaceData.workspaceBoundingBox) {
+            workspaceData.workspaceBoundingBox = tableWithBoundingBox.boundingBox;
+        }
+
+        return tableWithBoundingBox;
     }
 
     /**

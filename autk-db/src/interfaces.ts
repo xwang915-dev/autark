@@ -53,6 +53,8 @@ export interface BaseTable {
   name: string;
   /** Flat schema information returned by DuckDB. */
   columns: Column[];
+  /** Cached layer extent when the table contains geometry data. */
+  boundingBox?: BoundingBox;
   /** Optional raster band metadata when the table stores raster data. */
   bands?: RasterBandMetadata[];
 }
@@ -158,10 +160,8 @@ export interface WorkspaceData {
   tables: Array<Table>;
   /** Target coordinate reference system used for stored geometries. */
   coordinateFormat: string;
-  /** Cached bounding box covering all known workspace layer geometries. */
+  /** Cached immutable default bounding box for the workspace. */
   workspaceBoundingBox?: BoundingBox;
-  /** Cached OSM query extent for the workspace when OSM data has been loaded. */
-  osmBoundingBox?: BoundingBox;
 }
 
 /**
