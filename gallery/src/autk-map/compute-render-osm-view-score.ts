@@ -33,6 +33,7 @@ export class ComputeRenderOsmViewScore {
         await this.db.init();
 
         await this.db.loadOsm({
+            pbfFileUrl: '/data/lower_mnt.osm.pbf',
             queryArea: {
                 geocodeArea: 'New York',
                 areas: ['Battery Park City', 'Financial District'],
