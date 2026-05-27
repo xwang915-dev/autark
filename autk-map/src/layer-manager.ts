@@ -24,6 +24,7 @@ import { Layer } from './layer';
 import { RasterLayer } from './layer-raster';
 import { Triangles3DLayer } from './layer-triangles3D';
 import { Triangles2DLayer } from './layer-triangles2D';
+import { SpriteLayer } from './layer-sprite';
 
 /**
  * Manages all map layers as a single ordered list.
@@ -87,7 +88,9 @@ export class LayerManager {
             ? new Triangles3DLayer(layerInfo, layerRender, layerData)
             : layerInfo.typeLayer === 'raster'
                 ? new RasterLayer(layerInfo, layerRender, layerData)
-                : new Triangles2DLayer(layerInfo, layerRender, layerData);
+                : layerInfo.typeLayer === 'points'
+                    ? new SpriteLayer(layerInfo, layerRender, layerData)
+                    : new Triangles2DLayer(layerInfo, layerRender, layerData);
 
         if (!OSM_BASE_LAYER_ORDER.includes(layerInfo.typeLayer) && layerInfo.typeLayer !== 'buildings') {
             this._dynamicOrder.push(layerInfo.id);

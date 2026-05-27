@@ -162,6 +162,8 @@ export interface WorkspaceData {
   coordinateFormat: string;
   /** Cached immutable default bounding box for the workspace. */
   workspaceBoundingBox?: BoundingBox;
+  /** Cached immutable default crop layer for the workspace, or `null` when none exists. */
+  workspaceCropLayer?: string | null;
 }
 
 /**

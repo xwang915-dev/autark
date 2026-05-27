@@ -65,6 +65,12 @@ export interface LayerData {
     border?: LayerBorder[];
     /** Cumulative border-component metadata aligned with `border`. */
     borderComponents?: LayerBorderComponent[];
+    /** Packed point-instance centers `[x, y, ...]` for instanced point rendering. */
+    pointInstances?: Float32Array;
+    /** Number of point instances stored in `pointInstances`. */
+    pointInstanceCount?: number;
+    /** Base point radius in local planar units for instanced point rendering. */
+    pointSize?: number;
     /** Raster grid width in cells, for raster layers only. */
     rasterResX?: number;
     /** Raster grid height in cells, for raster layers only. */

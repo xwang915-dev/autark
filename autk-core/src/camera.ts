@@ -243,6 +243,17 @@ export class Camera {
     }
 
     /**
+     * Returns a scalar proportional to the current map zoom for marker sizing.
+     *
+     * This uses the camera eye height, which is the quantity changed by the map
+     * zoom interaction and therefore tracks zoom more reliably than the
+     * normalized eye-direction vector.
+     */
+    public getZoomScale(): number {
+        return Math.max(Math.abs(this.wEye[2]), 1) / 10000;
+    }
+
+    /**
      * Rebuilds view and projection matrices from the current camera state.
      *
      * Uses reversed-Z depth for improved precision at long range.

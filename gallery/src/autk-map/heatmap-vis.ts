@@ -30,10 +30,7 @@ export class Heatmap {
         await this.db.loadCsv({
             csvFileUrl: `${URL}data/noise.csv`,
             outputTableName: 'noise',
-            geometryColumns: {
-                latColumnName: 'Latitude',
-                longColumnName: 'Longitude',
-            },
+            geometryColumns: true,
         });
 
         console.log('Building heatmap...');

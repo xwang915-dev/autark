@@ -80,6 +80,7 @@ export type {
 
 /** Triangulates point features into renderable marker geometry. */
 export { TriangulatorPoints }    from './triangulator-points';
+export type { PointInstancesData } from './triangulator-points';
 /** Triangulates polyline features into stroked mesh geometry. */
 export { TriangulatorPolylines } from './triangulator-polylines';
 /** Triangulates polygon features into filled mesh geometry. */

@@ -161,6 +161,7 @@ export class AutkDb {
             tables: [],
             coordinateFormat: DEFAULT_WORKSPACE_COORDINATE_FORMAT,
             workspaceBoundingBox: undefined,
+            workspaceCropLayer: null,
         });
 
         this.osmProcessingPipeline = new OsmProcessingPipeline(this.db, this.conn);
@@ -212,6 +213,7 @@ export class AutkDb {
                 tables: [],
                 coordinateFormat: DEFAULT_WORKSPACE_COORDINATE_FORMAT,
                 workspaceBoundingBox: undefined,
+                workspaceCropLayer: null,
             });
         }
 
@@ -280,6 +282,12 @@ export class AutkDb {
             throw new Error('Database not initialized. Please call init() first.');
 
         const workspaceData = this.getCurrentWorkspaceData();
+        if (workspaceData.tables.some((table) => table.source !== 'osm')) {
+            const message = 'OpenStreetMap data must be loaded before non-OSM layers so it can establish the workspace context.';
+            console.error(message);
+            throw new Error(message);
+        }
+
         const targetCrs = workspaceData.coordinateFormat;
         const sourceCrs = params.autoLoadLayers?.coordinateFormat ?? DEFAULT_INPUT_COORDINATE_FORMAT;
 
@@ -342,6 +350,7 @@ export class AutkDb {
                     const tableIndex = workspaceData.tables.findIndex((t) => t.name === layerTable.name);
                     if (tableIndex !== -1) workspaceData.tables[tableIndex] = updatedTable;
                     await this.refreshStoredBoundingBox(layerTable.name);
+                    workspaceData.workspaceCropLayer = layerTable.name;
                     surfaceLayerName = layerTable.name;
                 } else {
                     clippableLayerNames.push(layerTable.name);
@@ -351,7 +360,7 @@ export class AutkDb {
             if (surfaceLayerName && clippableLayerNames.length > 0) {
                 for (const layerName of clippableLayerNames) {
                     const cropGeometry = !layerName.endsWith('_buildings');
-                    await this.clipLayerToSurface(layerName, surfaceLayerName, this.currentWorkspace, cropGeometry);
+                    await this.clipLayerToLayer(layerName, surfaceLayerName, this.currentWorkspace, cropGeometry);
                     await this.refreshStoredBoundingBox(layerName);
                 }
             }
@@ -389,12 +398,16 @@ export class AutkDb {
             throw new Error('Database not initialized. Please call init() first.');
 
         const workspaceData = this.getCurrentWorkspaceData();
+        const hasWorkspaceContext = Boolean(workspaceData.workspaceBoundingBox);
         const table = await this.loadCsvUseCase.exec({
             ...params,
             workspace: this.currentWorkspace,
             workspaceCoordinateFormat: workspaceData.coordinateFormat,
         });
         this.registerTable(table);
+        if (hasWorkspaceContext) {
+            await this.applyWorkspaceConstraints(table.name);
+        }
 
         return this.initializeSpatialMetadata(table);
     }
@@ -419,12 +432,16 @@ export class AutkDb {
             throw new Error('Database not initialized. Please call init() first.');
 
         const workspaceData = this.getCurrentWorkspaceData();
+        const hasWorkspaceContext = Boolean(workspaceData.workspaceBoundingBox);
         const table = await this.loadJsonUseCase.exec({
             ...params,
             workspace: this.currentWorkspace,
             workspaceCoordinateFormat: workspaceData.coordinateFormat,
         });
         this.registerTable(table);
+        if (hasWorkspaceContext) {
+            await this.applyWorkspaceConstraints(table.name);
+        }
 
         return this.initializeSpatialMetadata(table);
     }
@@ -483,13 +500,16 @@ export class AutkDb {
             throw new Error('Database not initialized. Please call init() first.');
 
         const workspaceData = this.getCurrentWorkspaceData();
+        const hasWorkspaceContext = Boolean(workspaceData.workspaceBoundingBox);
         const table = await this.loadGeojsonUseCase.exec({
             ...params,
-            boundingBox: this.workspaceUsesOsmBounds() ? workspaceData.workspaceBoundingBox : undefined,
             workspace: this.currentWorkspace,
             workspaceCoordinateFormat: workspaceData.coordinateFormat,
         });
         this.registerTable(table);
+        if (hasWorkspaceContext) {
+            await this.applyWorkspaceConstraints(table.name);
+        }
 
         const tableWithSpatialMetadata = await this.initializeSpatialMetadata(table);
 
@@ -525,12 +545,16 @@ export class AutkDb {
             throw new Error('Database not initialized. Please call init() first.');
 
         const workspaceData = this.getCurrentWorkspaceData();
+        const hasWorkspaceContext = Boolean(workspaceData.workspaceBoundingBox);
         const table = await this.loadGeoTiffUseCase.exec({
             ...params,
             workspace: this.currentWorkspace,
             workspaceCoordinateFormat: workspaceData.coordinateFormat,
         });
         this.registerTable(table);
+        if (hasWorkspaceContext) {
+            await this.applyWorkspaceConstraints(table.name);
+        }
 
         return this.initializeSpatialMetadata(table);
     }
@@ -826,6 +850,9 @@ export class AutkDb {
 
         const workspaceData = this.getCurrentWorkspaceData();
         workspaceData.tables = workspaceData.tables.filter((t) => t.name !== tableName);
+        if (workspaceData.workspaceCropLayer === tableName) {
+            workspaceData.workspaceCropLayer = null;
+        }
     }
 
     /**
@@ -878,17 +905,52 @@ export class AutkDb {
     }
 
     /**
-     * Returns whether the active workspace extent was established from OSM-backed data.
-     */
-    private workspaceUsesOsmBounds(): boolean {
-        return this.tables.some((table) => table.source === 'osm' && table.type !== undefined);
-    }
-
-    /**
      * Returns whether the table currently stores geometry data.
      */
     private tableHasGeometry(table: Table): boolean {
         return table.columns.some((column) => column.type === 'GEOMETRY');
+    }
+
+    /**
+     * Returns whether the table should define the workspace crop layer.
+     */
+    private isPolygonalTable(table: Table): boolean {
+        return table.type === 'surface'
+            || table.type === 'parks'
+            || table.type === 'water'
+            || table.type === 'buildings'
+            || table.type === 'polygons';
+    }
+
+    /**
+     * Returns whether clipping should crop geometry or only filter rows.
+     */
+    private shouldCropGeometry(table: Table): boolean {
+        return table.type !== 'points' && table.type !== 'buildings' && table.type !== 'raster';
+    }
+
+    /**
+     * Applies the current workspace bounding-box filter and optional crop layer to a loaded table.
+     */
+    private async applyWorkspaceConstraints(tableName: string): Promise<void> {
+        const workspaceData = this.getCurrentWorkspaceData();
+        const table = workspaceData.tables.find((item) => item.name === tableName);
+        if (!table || !this.tableHasGeometry(table) || !workspaceData.workspaceBoundingBox) return;
+
+        await this.clipLayerToBoundingBox(
+            tableName,
+            workspaceData.workspaceBoundingBox,
+            this.currentWorkspace,
+        );
+
+        if (workspaceData.workspaceCropLayer && workspaceData.workspaceCropLayer !== tableName) {
+            await this.clipLayerToLayer(
+                tableName,
+                workspaceData.workspaceCropLayer,
+                this.currentWorkspace,
+                this.shouldCropGeometry(table),
+            );
+        }
     }
 
     /**
@@ -922,6 +984,9 @@ export class AutkDb {
         const workspaceData = this.getCurrentWorkspaceData();
         if (!workspaceData.workspaceBoundingBox) {
             workspaceData.workspaceBoundingBox = tableWithBoundingBox.boundingBox;
+            if (this.isPolygonalTable(tableWithBoundingBox)) {
+                workspaceData.workspaceCropLayer = tableWithBoundingBox.name;
+            }
         }
 
         return tableWithBoundingBox;
@@ -951,43 +1016,67 @@ export class AutkDb {
     }
 
     /**
-     * Clips a layer table to the unioned geometry of a surface table.
-     *
-     * Rewrites the layer table in place and can either crop geometries with `ST_Intersection` or only filter intersecting rows.
-     *
-     * @param layerTableName - The layer table to clip.
-     * @param surfaceTableName - The surface table used as the clipping boundary.
-     * @param workspace - The workspace schema containing both tables.
-     * @param cropGeometry - When true, replaces geometries with their clipped version; otherwise filters rows only.
-     * @returns Resolves when the clipped replacement table has been written.
-     * @throws If the layer rewrite query fails.
-     * @example
-     * await this.clipLayerToSurface('roads', 'surface', this.currentWorkspace, false);
+     * Filters a layer table to the current workspace bounding box in place.
      */
-    private async clipLayerToSurface(
+    private async clipLayerToBoundingBox(
         layerTableName: string,
-        surfaceTableName: string,
+        boundingBox: BoundingBox,
+        workspace: string,
+    ): Promise<void> {
+        const qualifiedLayer = `${workspace}.${layerTableName}`;
+        const envelope = `ST_MakeEnvelope(${boundingBox.minLon}, ${boundingBox.minLat}, ${boundingBox.maxLon}, ${boundingBox.maxLat})`;
+
+        await this.conn!.query(`
+      DELETE FROM ${qualifiedLayer}
+      WHERE NOT ST_Intersects(geometry, ${envelope});
+    `);
+    }
+
+    /**
+     * Filters or crops a layer table to the geometry of another layer.
+     */
+    private async clipLayerToLayer(
+        layerTableName: string,
+        cropLayerName: string,
         workspace: string,
         cropGeometry: boolean = true,
     ): Promise<void> {
         const qualifiedLayer = `${workspace}.${layerTableName}`;
-        const qualifiedSurface = `${workspace}.${surfaceTableName}`;
-        const geometrySelect = cropGeometry ? 'ST_Intersection(l.geometry, surf.geom)' : 'l.geometry';
-        const emptyFilter = cropGeometry ? 'WHERE NOT ST_IsEmpty(geometry)' : '';
+        const qualifiedCropLayer = `${workspace}.${cropLayerName}`;
+
+        if (!cropGeometry) {
+            await this.conn!.query(`
+      DELETE FROM ${qualifiedLayer} AS l
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM ${qualifiedCropLayer} crop
+        WHERE ST_Intersects(l.geometry, ST_MakeValid(crop.geometry))
+      );
+    `);
+            return;
+        }
 
         await this.conn!.query(`
-      CREATE OR REPLACE TABLE ${qualifiedLayer} AS
-      WITH surf AS (
-        SELECT ST_Union_Agg(geometry) AS geom FROM ${qualifiedSurface}
-      ),
-      clipped AS (
-        SELECT l.* EXCLUDE (geometry),
-          ${geometrySelect} AS geometry
-        FROM ${qualifiedLayer} l, surf
-        WHERE ST_Intersects(l.geometry, surf.geom)
-      )
-      SELECT * FROM clipped
-      ${emptyFilter};
+      DELETE FROM ${qualifiedLayer} AS l
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM ${qualifiedCropLayer} crop
+        WHERE ST_Intersects(l.geometry, ST_MakeValid(crop.geometry))
+      );
+    `);
+
+        await this.conn!.query(`
+      UPDATE ${qualifiedLayer} AS l
+      SET geometry = ST_Intersection(ST_MakeValid(l.geometry), crop.geom)
+      FROM (
+        SELECT ST_Union_Agg(ST_MakeValid(geometry)) AS geom FROM ${qualifiedCropLayer}
+      ) crop
+      WHERE ST_Intersects(l.geometry, crop.geom);
+    `);
+
+        await this.conn!.query(`
+      DELETE FROM ${qualifiedLayer}
+      WHERE ST_IsEmpty(geometry);
     `);
     }
 }

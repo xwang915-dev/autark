@@ -70,6 +70,7 @@ import { LayerManager } from './layer-manager';
 import { VectorLayer } from './layer-vector';
 import { RasterLayer } from './layer-raster';
 import { Triangles3DLayer } from './layer-triangles3D';
+import { SpriteLayer } from './layer-sprite';
 import { PipelineBuildingSSAO } from './pipeline-triangle-ssao';
 
 import { AutkMapUi } from './map-ui';
@@ -324,7 +325,7 @@ export class AutkMap {
      * @throws Never throws. Errors are logged to the console.
      */
     updateThematic(id: string, { collection, property }: UpdateThematicParams): void {
-        const layer = this._layerManager.searchByLayerId(id) as VectorLayer | null;
+        const layer = this._layerManager.searchByLayerId(id) as VectorLayer | SpriteLayer | null;
 
         if (!layer) { return; }
         if (layer.layerInfo.typeLayer === 'raster') { return; };
@@ -553,7 +554,7 @@ export class AutkMap {
                 return;
             }
         } else {
-            const vectorLayer = layer as VectorLayer;
+            const vectorLayer = layer as VectorLayer | SpriteLayer;
             const thematicValues = vectorLayer.thematic;
             if (thematicValues.length > 0) {
                 const existingDomain = layer.layerRenderInfo.colormap.computedDomain;
@@ -1058,16 +1059,19 @@ export class AutkMap {
             isSkip: false,
         };
 
-        const layerMesh = TriangulatorPoints.buildMesh(geojson, this.layerManager.origin);
-        if (layerMesh[0].length === 0 || layerMesh[1].length === 0) {
+        const pointInstances = TriangulatorPoints.buildInstances(geojson, this.layerManager.origin);
+        if (pointInstances.instances.length === 0 || pointInstances.components.length === 0) {
             console.error('Invalid Points Layer.');
             return;
         }
 
         const layerData = {
-            geometry: layerMesh[0],
-            components: layerMesh[1],
-            thematic: layerMesh[1].map(() => {
+            geometry: [],
+            components: pointInstances.components,
+            pointInstances: pointInstances.instances,
+            pointInstanceCount: pointInstances.instances.length / 2,
+            pointSize: TriangulatorPoints.getPointSize(),
+            thematic: pointInstances.components.map(() => {
                 return {
                     value: 0,
                     valid: 1,

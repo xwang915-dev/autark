@@ -9,20 +9,24 @@ export class SpatialJoin {
     protected db!: AutkDb;
 
     public async run(canvas: HTMLCanvasElement): Promise<void> {
+        console.log(`[autk-db] init...`);
         this.db = new AutkDb();
         await this.db.init();
 
+        console.log(`[autk-db] Loading neighborhoods geojson...`);
         await this.db.loadGeojson({
             geojsonFileUrl: `${URL}data/mnt_neighs.geojson`,
             outputTableName: 'neighborhoods',
         });
 
+        console.log(`[autk-db] Loading noise csv...`);
         await this.db.loadCsv({
             csvFileUrl: `${URL}data/noise.csv`,
             outputTableName: 'noise',
             geometryColumns: true
         });
 
+        console.log(`[autk-db] Performing spatial join...`);
         await this.db.spatialQuery({
             tableRootName: 'neighborhoods',
             tableJoinName: 'noise',
@@ -34,6 +38,7 @@ export class SpatialJoin {
             ],
         });
 
+        console.log(`[autk-map] Init...`);
         this.map = new AutkMap(canvas);
         await this.map.init();
 
@@ -50,7 +55,7 @@ export class SpatialJoin {
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             this.map.updateRenderInfo(layerData.name, { isSkip: layerData.source === 'csv' });
 
-            console.log(`Loading layer: ${layerData.name} from ${layerData.source} of type ${layerData.type}`);
+            console.log(`[autk-map] Loading layer: ${layerData.name} from ${layerData.source} of type ${layerData.type}`);
         }
     }
 

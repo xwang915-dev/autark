@@ -20,7 +20,6 @@ import { FeatureCollection } from 'geojson';
 import {
     LayerGeometry,
     TriangulatorBuildings,
-    TriangulatorPoints,
     TriangulatorPolygons,
     TriangulatorPolylines,
     computeOrigin,
@@ -454,9 +453,6 @@ export class ComputeRender extends GpuPipeline {
             case 'roads':
             case 'polylines':
                 [geometries] = TriangulatorPolylines.buildMesh(layer.collection, origin);
-                break;
-            case 'points':
-                [geometries] = TriangulatorPoints.buildMesh(layer.collection, origin);
                 break;
             default:
                 console.warn(`ComputeRender: unsupported layer type "${layer.type}", skipping.`);
