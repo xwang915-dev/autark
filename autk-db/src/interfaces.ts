@@ -1,4 +1,4 @@
-import type { BoundingBox, LayerType } from './types-core';
+import type { BoundingBox, LayerType } from '@urban-toolkit/autk-core';
 
 export {
   PARKS_LEISURE_VALUES,

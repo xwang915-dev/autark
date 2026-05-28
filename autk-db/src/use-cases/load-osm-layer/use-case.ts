@@ -3,7 +3,7 @@ import type { Geometry, MultiPolygon, Polygon, Position } from 'geojson';
 
 import { LoadOsmLayerParams } from './interfaces';
 import { LOAD_LAYER_QUERY } from './queries';
-import type { BoundingBox, LayerType } from '../../types-core';
+import type { BoundingBox, LayerType } from '@urban-toolkit/autk-core';
 import { OsmLayerTable } from '../../interfaces';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSPACE_COORDINATE_FORMAT } from '../../consts';

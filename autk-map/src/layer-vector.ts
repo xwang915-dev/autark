@@ -8,7 +8,7 @@
  * pipeline setup used by triangle-based vector rendering passes.
  */
 
-import { Camera, LayerComponent, LayerGeometry } from './types-core';
+import { Camera, LayerComponent, LayerGeometry } from '@urban-toolkit/autk-core';
 
 import {
     LayerData, 

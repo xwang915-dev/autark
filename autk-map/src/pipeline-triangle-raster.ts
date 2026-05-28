@@ -16,7 +16,7 @@ import rasterFragmentSource from './shaders/raster.frag.wgsl';
 import { Pipeline } from './pipeline';
 import { Renderer } from './renderer';
 
-import { Camera } from './types-core';
+import { Camera } from '@urban-toolkit/autk-core';
 
 import { RasterLayer } from './layer-raster';
 

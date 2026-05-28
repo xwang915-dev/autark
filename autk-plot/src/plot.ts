@@ -1,6 +1,6 @@
 import type { PlotType, UnifiedPlotConfig } from './api';
 
-import type { EventEmitter } from './types-core';
+import type { EventEmitter } from '@urban-toolkit/autk-core';
 
 import type { PlotEventRecord } from './types-events';
 

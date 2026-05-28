@@ -5,8 +5,8 @@ import { DEFAULT_WORKSPACE_NAME, DEFAULT_INPUT_COORDINATE_FORMAT, DEFAULT_WORKSP
 import { LOAD_FEATURE_COLLECTION_QUERY, LOAD_LAYER_FROM_FEATURE_COLLECTION_QUERY } from './queries';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';
 import { FeatureCollection } from 'geojson';
-import type { BoundingBox } from '../../types-core';
-import { mapGeometryTypeToLayerType } from '../../types-core';
+import type { BoundingBox } from '@urban-toolkit/autk-core';
+import { mapGeometryTypeToLayerType } from '@urban-toolkit/autk-core';
 
 /**
  * Loads a GeoJSON FeatureCollection as a spatial layer table.

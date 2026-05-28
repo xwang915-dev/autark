@@ -16,7 +16,7 @@ import {
     Camera, 
     ColorMap, 
     DEFAULT_COLORMAP_RESOLUTION 
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 
 import { Renderer } from './renderer';
 import { MapStyle } from './map-style';

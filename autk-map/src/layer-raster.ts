@@ -24,12 +24,12 @@ import {
     DEFAULT_TRANSFER_FUNCTION,
     buildTransferContext,
     computeAlphaByte,
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 
 import type { 
     TransferFunction,
     RequiredTransferFunction
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 
 import { Layer } from "./layer";
 

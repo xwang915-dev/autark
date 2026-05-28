@@ -9,7 +9,7 @@
  * the main layer data.
  */
 
-import { Camera, LayerBorder, LayerBorderComponent } from './types-core';
+import { Camera, LayerBorder, LayerBorderComponent } from '@urban-toolkit/autk-core';
 
 import {
     LayerInfo,

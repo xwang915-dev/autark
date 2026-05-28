@@ -17,7 +17,7 @@ import trianglesFragmentSource from './shaders/triangle-01.frag.wgsl';
 import { Pipeline } from './pipeline';
 import { Renderer } from './renderer';
 
-import { Camera } from './types-core';
+import { Camera } from '@urban-toolkit/autk-core';
 
 import { VectorLayer } from './layer-vector';
 

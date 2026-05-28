@@ -9,7 +9,7 @@
  * rendering, picking, highlighting, and cleanup.
  */
 
-import { Camera } from './types-core';
+import { Camera } from '@urban-toolkit/autk-core';
 import { LayerInfo, LayerRenderInfo } from './types-layers';
 import { Renderer } from './renderer';
 

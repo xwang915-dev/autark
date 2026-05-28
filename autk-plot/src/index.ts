@@ -3,28 +3,6 @@
 /** Unified plot wrapper used to instantiate and interact with plot types. */
 export { AutkPlot } from './plot';
 
-// ─── Core re-exports (from autk-core via types-core) ───────────────────────
-
-/** Strategy enum controlling how a colormap domain is derived from data. */
-export { ColorMapDomainStrategy } from './types-core';
-/** Interpolator identifiers for d3-scale-chromatic color schemes. */
-export { ColorMapInterpolator } from './types-core';
-/** Colormap utility: conversions and data-to-color sampling helpers. */
-export { ColorMap } from './types-core';
-
-export type {
-	/** Hex color string (for example `#5dade2`). */
-	ColorHEX,
-	/** RGB color triplet object. */
-	ColorRGB,
-	/** Texture/typed color payload used by rendering utilities. */
-	ColorTEX,
-	/** Colormap configuration payload. */
-	ColorMapConfig,
-	/** Domain specification for colormap scaling. */
-	ColorMapDomainSpec,
-} from './types-core';
-
 // ─── API and config types ───────────────────────────────────────────────────
 
 export type { AutkDatum } from './types-plot';
@@ -45,16 +23,6 @@ export type {
 } from './api';
 
 // ─── Events ─────────────────────────────────────────────────────────────────
-
-/** Typed event emitter used by plot event APIs. */
-export { EventEmitter } from './types-core';
-
-export type { 
-	/** Listener function type used by the event emitter. */
-	EventListener,
-	/** Data structure for representing selected elements in the plot. */
-    SelectionData
-} from './types-core';
 
 /** Supported plot interaction events emitted by plot instances. */
 export { PlotEvent } from './types-events';

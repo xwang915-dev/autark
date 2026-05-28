@@ -17,8 +17,8 @@ import {
     ColorMapDomainStrategy,
     ColorMap,
     valueAtPath,
-} from './types-core';
-import type { ColorMapDomainSpec, ResolvedDomain } from './types-core';
+} from '@urban-toolkit/autk-core';
+import type { ColorMapDomainSpec, ResolvedDomain } from '@urban-toolkit/autk-core';
 
 import { run } from './transforms';
 import type { ExecutedPlotTransform } from './transforms';

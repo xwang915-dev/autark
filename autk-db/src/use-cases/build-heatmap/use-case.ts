@@ -1,7 +1,7 @@
 
 import { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import { BuildHeatmapParams } from './interfaces';
-import type { BoundingBox } from '../../types-core';
+import type { BoundingBox } from '@urban-toolkit/autk-core';
 import { RasterBandMetadata, Table, UserTable } from '../../interfaces';
 import { SpatialJoinUseCase } from '../spatial-join/use-case';
 import { getColumnsFromDuckDbTableDescribe } from '../../utils';

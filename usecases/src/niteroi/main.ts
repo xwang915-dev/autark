@@ -1,5 +1,6 @@
 import type { FeatureCollection, Feature, Geometry, GeoJsonProperties } from 'geojson';
-import { AutkMap, ColorMapInterpolator, ColorMapDomainStrategy, MapStyle, MapEvent } from '@urban-toolkit/autk-map';
+import { AutkMap, MapStyle, MapEvent } from '@urban-toolkit/autk-map';
+import { ColorMapInterpolator, ColorMapDomainStrategy } from '@urban-toolkit/autk-core';
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { ComputeGpgpu } from '@urban-toolkit/autk-compute';
 import { AutkPlot, PlotEvent, PlotStyle } from '@urban-toolkit/autk-plot';

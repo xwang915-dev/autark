@@ -7,7 +7,7 @@
  * that fall into a bucket.
  */
 
-import { valueAtPath } from '../../types-core';
+import { valueAtPath } from '@urban-toolkit/autk-core';
 
 import type { AutkDatum } from '../../types-plot';
 import type { BinningEventsTransformConfig, TransformResolution } from '../../api';

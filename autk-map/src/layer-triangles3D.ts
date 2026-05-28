@@ -9,7 +9,7 @@
  * updates before rendering.
  */
 
-import { Camera, LayerGeometry } from './types-core';
+import { Camera, LayerGeometry } from '@urban-toolkit/autk-core';
 
 import {
     LayerInfo,

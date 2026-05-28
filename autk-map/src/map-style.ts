@@ -8,8 +8,8 @@
  * resolving style colors into the RGB values consumed by the renderer.
  */
 
-import { ColorHEX, ColorRGB, ColorMap, LAYER_TYPE_VALUES } from './types-core';
-import type { LayerType } from './types-core';
+import { ColorHEX, ColorRGB, ColorMap, LAYER_TYPE_VALUES } from '@urban-toolkit/autk-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 
 import defaultStyle from './styles/default.json';
 import light from './styles/light.json';

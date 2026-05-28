@@ -13,7 +13,7 @@ import {
     ColorMap,
     EventEmitter,
     valueAtPath,
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 import type { PlotEventRecord } from './types-events';
 
 import { PlotStyle } from './plot-style';

@@ -1,4 +1,4 @@
-import type { LayerType, BoundingBox } from '../../types-core';
+import type { LayerType, BoundingBox } from '@urban-toolkit/autk-core';
 
 export type { LayerType };
 

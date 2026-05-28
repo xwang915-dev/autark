@@ -1,4 +1,4 @@
-import type { LayerType } from '../../types-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 
 /**
  * Enables point geometry creation from the default `Latitude` and `Longitude` CSV columns.

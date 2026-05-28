@@ -11,8 +11,8 @@
 
 import { FeatureCollection, Geometry } from 'geojson';
 
-import { computeOrigin, OSM_BASE_LAYER_ORDER } from './types-core';
-import type { LayerType } from './types-core';
+import { computeOrigin, OSM_BASE_LAYER_ORDER } from '@urban-toolkit/autk-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 
 import { 
     LayerData, 

@@ -11,8 +11,6 @@
  * console.log(DEFAULT_WORKSPACE_NAME); // 'autk'
  * console.log(isVectorTable({ source: 'geojson', name: 'roads', columns: [], type: 'line' })); // true
  */
-export type { LayerType, BoundingBox } from './types-core';
-
 export {
   DEFAULT_WORKSPACE_NAME,
   DEFAULT_INPUT_COORDINATE_FORMAT,

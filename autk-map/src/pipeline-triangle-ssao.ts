@@ -18,7 +18,7 @@ import buildingsFS01 from './shaders/buildings-01.frag.wgsl';
 import buildingsVS02 from './shaders/buildings-02.vert.wgsl';
 import buildingsFS02 from './shaders/buildings-02.frag.wgsl';
 
-import { Camera } from './types-core';
+import { Camera } from '@urban-toolkit/autk-core';
 import { Renderer } from './renderer';
 
 import { Pipeline } from './pipeline';

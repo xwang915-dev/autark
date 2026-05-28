@@ -29,7 +29,7 @@
  */
 import * as d3 from 'd3';
 
-import { valueAtPath } from '../types-core';
+import { valueAtPath } from '@urban-toolkit/autk-core';
 
 import type { PlotConfig } from '../api';
 

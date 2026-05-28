@@ -1,4 +1,4 @@
-import { Camera, LayerComponent } from './types-core';
+import { Camera, LayerComponent } from '@urban-toolkit/autk-core';
 import { LayerData, LayerInfo, LayerRenderInfo, LayerThematic } from './types-layers';
 import { Layer } from './layer';
 import { Renderer } from './renderer';

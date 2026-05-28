@@ -1,5 +1,5 @@
 import { FeatureCollection } from 'geojson';
-import type { BoundingBox, LayerType } from '../../types-core';
+import type { BoundingBox, LayerType } from '@urban-toolkit/autk-core';
 
 /**
  * Parameters for loading a GeoJSON FeatureCollection into DuckDB as a spatial layer.

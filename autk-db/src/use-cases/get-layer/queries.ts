@@ -1,5 +1,5 @@
 import { Table } from '../../interfaces';
-import type { LayerType } from '../../types-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 
 /**
  * Builds a SQL query that exports a layer table as a GeoJSON FeatureCollection.

@@ -1,4 +1,4 @@
-import type { LayerType } from '../../types-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 
 /**
  * OSM-specific layer types used by the processing config (excludes `background`).

@@ -9,8 +9,8 @@
  * selection stay aligned with the current map contents.
  */
 
-import { ColorMap } from './types-core';
-import type { ColorRGB } from './types-core';
+import { ColorMap } from '@urban-toolkit/autk-core';
+import type { ColorRGB } from '@urban-toolkit/autk-core';
 import { Layer } from './layer';
 import { AutkMap } from './map';
 

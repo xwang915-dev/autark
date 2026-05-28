@@ -20,7 +20,7 @@ import type {
     LayerComponent,
     LayerGeometry,
     LayerType,
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 
 import type { 
     LayerRenderInfo, 

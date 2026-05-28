@@ -38,7 +38,7 @@ import {
     LayerType,
     ResolvedDomain,
     mapGeometryTypeToLayerType,
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 
 import { MapEvent } from './types-events';
 import type { MapEventRecord } from './types-events';

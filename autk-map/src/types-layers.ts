@@ -17,7 +17,7 @@ import type {
     LayerComponent,
     LayerGeometry,
     LayerType,
-} from './types-core';
+} from '@urban-toolkit/autk-core';
 
 /** Static metadata used to identify and order a layer in the map stack. */
 export interface LayerInfo {

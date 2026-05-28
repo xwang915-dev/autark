@@ -1,4 +1,4 @@
-import type { BoundingBox } from '../../types-core';
+import type { BoundingBox } from '@urban-toolkit/autk-core';
 
 /**
  * Creates a temporary DuckDB table from a GeoJSON file registered in the VFS.

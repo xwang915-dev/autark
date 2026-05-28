@@ -123,14 +123,18 @@ export class MouseEvents {
      * Starts a drag when the pointer goes down over the canvas.
      *
      * The canvas bounds check is necessary because this listener fires for
-     * all document `pointerdown` events. Only primary-button and middle-button
-     * presses over the map canvas begin a drag interaction.
+     * all document `pointerdown` events. Clicking the canvas also gives it
+     * keyboard focus so canvas-scoped shortcuts become active. Only
+     * primary-button and middle-button presses over the map canvas begin a drag
+     * interaction.
      *
      * @param event Pointer event raised on press.
      * @returns Records the drag start position and switches the interaction state to drag when the event targets the canvas.
      */
     pointerDown(event: PointerEvent): void {
         if (event.target !== this._map.renderer.canvas) return;
+
+        this._map.canvas.focus({ preventScroll: true });
 
         if (event.button === 0 || event.button === 1) {
             event.preventDefault();

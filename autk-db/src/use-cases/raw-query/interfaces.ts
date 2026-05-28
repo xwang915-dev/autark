@@ -1,4 +1,4 @@
-import type { LayerType } from '../../types-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 import type { TableSource } from '../../interfaces';
 
 export type RawQueryOutput = Record<string, unknown>[];

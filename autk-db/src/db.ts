@@ -13,7 +13,7 @@ import {
     Table,
 } from './interfaces';
 import type { WorkspaceData } from './interfaces';
-import type { BoundingBox, LayerType } from './types-core';
+import type { BoundingBox, LayerType } from '@urban-toolkit/autk-core';
 
 import {
     DEFAULT_WORKSPACE_NAME,

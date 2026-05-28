@@ -1,4 +1,4 @@
-import type { LayerType } from '../../types-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 
 export interface OsmElement {
   type: 'node' | 'way' | 'relation';

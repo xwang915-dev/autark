@@ -1,4 +1,4 @@
-import type { ColorHEX } from './types-core';
+import type { ColorHEX } from '@urban-toolkit/autk-core';
 
 /**
  * Global style helpers shared by all plot implementations.

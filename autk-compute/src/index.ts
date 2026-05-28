@@ -22,12 +22,6 @@ export {
     buildCameraMatrices,
 } from './viewpoint';
 
-/** Building-window triangulation helper from `autk-core`. */
-export { TriangulatorBuildingWithWindows } from '@urban-toolkit/autk-core';
-
-/** Building-window layout types from `autk-core`. */
-export type { BuildingWindowLayoutEntry, BuildingWindowLayoutResult } from '@urban-toolkit/autk-core';
-
 /** Public pipeline parameter types. */
 export type {
     RenderLayer,
@@ -38,9 +32,3 @@ export type {
     GpgpuPipelineParams,
 } from './api';
 
-/** Shared core types from `autk-core`. */
-export type {
-    ViewProjectionParams,
-    TypedArray,
-    TypedArrayConstructor,
-} from '@urban-toolkit/autk-core';

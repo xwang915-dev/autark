@@ -2,7 +2,7 @@
  * @module KeyEvents
  * Keyboard interaction controller for map-level shortcuts.
  *
- * This module defines the `KeyEvents` class, which binds global keyboard
+ * This module defines the `KeyEvents` class, which binds canvas-scoped keyboard
  * listeners for an `AutkMap` instance and translates supported shortcuts into
  * map-side updates. It currently manages style-cycling behavior and triggers
  * layer render-info invalidation so visual changes are applied on the next
@@ -15,10 +15,10 @@ import { MapStyle } from './map-style';
 /**
  * Keyboard interaction controller for map shortcuts.
  *
- * `KeyEvents` owns the lifecycle of global keyboard listeners associated with a
- * map instance. Supported shortcuts update shared map presentation state and may
- * mark existing layers dirty so dependent GPU-side render configuration is
- * rebuilt.
+ * `KeyEvents` owns the lifecycle of canvas-scoped keyboard listeners associated
+ * with a map instance. Supported shortcuts update shared map presentation state
+ * and may mark existing layers dirty so dependent GPU-side render
+ * configuration is rebuilt.
  */
 export class KeyEvents {
     /** Owning map instance. */
@@ -41,25 +41,32 @@ export class KeyEvents {
      *
      * Listener registration is idempotent for this instance: any previously
      * registered `keyup` handler is removed before the current bound handler is
-     * added again. Listeners are attached to `window`.
+     * added again. The canvas is made focusable when needed and listeners are
+     * attached directly to it.
      *
-     * @returns Nothing. The controller starts receiving global keyboard events.
+     * @returns Nothing. The controller starts receiving keyboard events while the canvas is focused.
      */
     bindEvents(): void {
-        window.removeEventListener('keyup', this._onKeyUp, false);
-        window.addEventListener('keyup', this._onKeyUp, false);
+        const canvas = this._map.canvas;
+        if (canvas.tabIndex < 0) {
+            canvas.tabIndex = 0;
+        }
+        canvas.style.outline = 'none';
+
+        canvas.removeEventListener('keyup', this._onKeyUp, false);
+        canvas.addEventListener('keyup', this._onKeyUp, false);
     }
 
     /**
      * Removes keyboard listeners registered by this controller.
      *
-     * This detaches the controller's bound `keyup` listener from `window`. It is
-     * safe to call even when listeners are not currently registered.
+     * This detaches the controller's bound `keyup` listener from the canvas. It
+     * is safe to call even when listeners are not currently registered.
      *
      * @returns Nothing. Keyboard shortcuts handled by this controller are disabled.
      */
     destroyEvents(): void {
-        window.removeEventListener('keyup', this._onKeyUp, false);
+        this._map.canvas.removeEventListener('keyup', this._onKeyUp, false);
     }
 
     /**

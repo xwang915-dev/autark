@@ -3,7 +3,7 @@ import { FeatureCollection } from 'geojson';
 
 import { GET_LAYER_AS_GEOJSON_QUERY } from './queries';
 import { Table } from '../../interfaces';
-import type { LayerType } from '../../types-core';
+import type { LayerType } from '@urban-toolkit/autk-core';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 
 /**

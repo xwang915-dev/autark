@@ -4,8 +4,8 @@ import type {
     GeoJsonProperties,
 } from 'geojson';
 
-import type { ColorMapDomainSpec } from './types-core';
-import type { ColorMapInterpolator } from './types-core';
+import type { ColorMapDomainSpec } from '@urban-toolkit/autk-core';
+import type { ColorMapInterpolator } from '@urban-toolkit/autk-core';
 
 import type { PlotEvent } from './types-events';
 

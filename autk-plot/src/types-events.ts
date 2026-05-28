@@ -1,4 +1,4 @@
-import type { SelectionData } from './types-core';
+import type { SelectionData } from '@urban-toolkit/autk-core';
 
 /**
  * Interaction events emitted by plot instances.

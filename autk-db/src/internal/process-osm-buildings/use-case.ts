@@ -1,6 +1,6 @@
 import { AsyncDuckDB, AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 
-import { computeIntersectingClusterIds } from '../../types-core';
+import { computeIntersectingClusterIds } from '@urban-toolkit/autk-core';
 import { Column } from '../../interfaces';
 import { DEFAULT_WORKSPACE_NAME } from '../../consts';
 import { ProcessOsmBuildingsParams } from './interfaces';

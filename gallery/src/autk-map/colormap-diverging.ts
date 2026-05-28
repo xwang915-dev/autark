@@ -1,5 +1,6 @@
 import { AutkDb } from '@urban-toolkit/autk-db';
-import { AutkMap, ColorMapDomainStrategy, ColorMapInterpolator } from '@urban-toolkit/autk-map';
+import { AutkMap } from '@urban-toolkit/autk-map';
+import { ColorMapDomainStrategy, ColorMapInterpolator } from '@urban-toolkit/autk-core';
 
 const URL = (import.meta as any).env.BASE_URL;
 
