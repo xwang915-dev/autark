@@ -25,6 +25,9 @@ export class GetLayerUseCase {
   /**
    * Exports a layer as GeoJSON, handling raster and building layers specially.
    *
+   * The returned FeatureCollection always includes `__autk_layer` at the root,
+   * and any duplicated per-feature `properties.__autk_layer` values are removed.
+   *
    * @param table - The layer table with its type and column metadata.
    * @param workspace - Workspace (schema) name; defaults to `autk`.
    * @returns A GeoJSON FeatureCollection representing the layer data.
@@ -35,6 +38,15 @@ export class GetLayerUseCase {
     const response = await this.conn.query(query);
 
     const raw: string = response.toArray()[0]?.geojson ?? '{"type":"FeatureCollection","features":[]}';
-    return JSON.parse(raw.replace(/\bNaN\b/g, 'null')) as FeatureCollection;
+    const featureCollection = JSON.parse(raw.replace(/\bNaN\b/g, 'null')) as FeatureCollection & { __autk_layer?: LayerType };
+
+    featureCollection.__autk_layer = table.type;
+
+    for (const feature of featureCollection.features) {
+      if (!feature.properties || typeof feature.properties !== 'object' || !('__autk_layer' in feature.properties)) continue;
+      delete (feature.properties as Record<string, unknown>).__autk_layer;
+    }
+
+    return featureCollection;
   }
 }
