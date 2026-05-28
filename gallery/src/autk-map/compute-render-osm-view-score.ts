@@ -43,7 +43,6 @@ export class ComputeRenderOsmViewScore {
                 layers: ['surface', 'parks', 'water', 'roads', 'buildings'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
-                dropOsmTable: true,
             },
         });
 

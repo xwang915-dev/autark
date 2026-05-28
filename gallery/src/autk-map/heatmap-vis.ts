@@ -23,7 +23,6 @@ export class Heatmap {
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
-                dropOsmTable: true,
             },
         });
 

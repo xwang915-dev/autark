@@ -111,6 +111,7 @@ export class LoadOsmFromPbfUseCase {
     const pbfFileUrl = params.pbfFileUrl;
     if (!pbfFileUrl) throw new Error('pbfFileUrl must be provided for PBF loading');
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
+    const outputTableName = params.outputTableName || 'table_osm';
     const onProgress = params.onProgress;
     const requestedLayers = this.getRequestedLayers(params);
 
@@ -155,22 +156,22 @@ export class LoadOsmFromPbfUseCase {
     const { osmData, boundariesData } = this.pipeline.splitCombinedResponse(combined, params.queryArea);
 
     const t0 = performance.now();
-    await this.pipeline.insertOsmDataUsingJson(params.outputTableName, osmData, workspace);
+    await this.pipeline.insertOsmDataUsingJson(outputTableName, osmData, workspace);
     const osmDataProcessingMs = performance.now() - t0;
 
     onProgress?.('processing-boundaries');
     const t1 = performance.now();
-    await this.pipeline.insertOsmDataUsingJson(`${params.outputTableName}_boundaries`, boundariesData, workspace, true);
+    await this.pipeline.insertOsmDataUsingJson(`${outputTableName}_boundaries`, boundariesData, workspace, true);
     const boundariesProcessingMs = performance.now() - t1;
 
-    const qualifiedTableName = `${workspace}.${params.outputTableName}`;
+    const qualifiedTableName = `${workspace}.${outputTableName}`;
     const tableDescribeResponse = await this.conn.query(`DESCRIBE ${qualifiedTableName}`);
     const columns = getColumnsFromDuckDbTableDescribe(tableDescribeResponse.toArray());
 
     return {
       tables: [
-        { source: 'osm', name: params.outputTableName, columns },
-        { source: 'osm', name: `${params.outputTableName}_boundaries`, columns },
+        { source: 'osm', name: outputTableName, columns },
+        { source: 'osm', name: `${outputTableName}_boundaries`, columns },
       ],
       osmElementCount: osmData.elements.length,
       boundaryElementCount: boundariesData.elements.length,
@@ -186,7 +187,7 @@ export class LoadOsmFromPbfUseCase {
    * @returns An array of requested layers narrowed to `RequestedLayer`.
    */
   private getRequestedLayers(params: LoadOsmParams): RequestedLayer[] {
-    const layers = params.autoLoadLayers?.layers ?? ['roads', 'buildings', 'parks', 'water'];
+    const layers = params.autoLoadLayers.layers;
     return layers.filter((layer): layer is RequestedLayer =>
       layer === 'roads' || layer === 'buildings' || layer === 'parks' || layer === 'water',
     );

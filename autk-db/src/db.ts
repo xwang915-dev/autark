@@ -52,8 +52,8 @@ import { UpdateTableParams, UpdateTableUseCase } from './use-cases/update-table'
  * const db = new AutkDb();
  * await db.init();
  * await db.loadOsm({
- *   outputTableName: 'manhattan',
  *   queryArea: { geocodeArea: 'New York', areas: ['Manhattan Island'] },
+ *   autoLoadLayers: { layers: ['buildings', 'roads', 'parks', 'water'] },
  * });
  */
 export class AutkDb {
@@ -251,21 +251,20 @@ export class AutkDb {
     }
 
     /**
-     * Loads OpenStreetMap data from the Overpass API or a PBF file, optionally extracting thematic layers.
+     * Loads OpenStreetMap data from the Overpass API or a PBF file and extracts thematic layers.
      *
-     * When `autoLoadLayers` is provided, extracts buildings, roads, parks, water, and surface layers.
+     * `autoLoadLayers` is required. The raw OSM import tables are treated as temporary
+     * staging tables and are always dropped after the requested layers are extracted.
      * The surface layer is polygonized and other layers are clipped to its geometry.
      *
-     * @param params - Area query, output table name, and optional layer extraction settings.
+     * @param params - Area query, optional output table name, and required layer extraction settings.
      * @returns Timing breakdown for OSM download and layer extraction.
      * @throws If the database is not initialized.
      * @example
      * const timings = await db.loadOsm({
-     *   outputTableName: 'manhattan',
      *   queryArea: { geocodeArea: 'New York', areas: ['Manhattan Island'] },
      *   autoLoadLayers: {
      *     layers: ['buildings', 'roads', 'surface'],
-     *     dropOsmTable: true,
      *   },
      * });
      */
@@ -289,11 +288,13 @@ export class AutkDb {
         }
 
         const targetCrs = workspaceData.coordinateFormat;
-        const sourceCrs = params.autoLoadLayers?.coordinateFormat ?? DEFAULT_INPUT_COORDINATE_FORMAT;
+        const sourceCrs = params.autoLoadLayers.coordinateFormat ?? DEFAULT_INPUT_COORDINATE_FORMAT;
+        const outputTableName = params.outputTableName ?? 'table_osm';
 
+        const loadParams = { ...params, outputTableName, workspace: this.currentWorkspace };
         const execResult = params.pbfFileUrl
-            ? await this.loadOsmFromPbfUseCase.exec({ ...params, workspace: this.currentWorkspace })
-            : await this.loadOsmFromOverpassApiUseCase.exec({ ...params, workspace: this.currentWorkspace });
+            ? await this.loadOsmFromPbfUseCase.exec(loadParams)
+            : await this.loadOsmFromOverpassApiUseCase.exec(loadParams);
         for (const table of execResult.tables) {
             this.registerTable(table);
         }
@@ -306,74 +307,70 @@ export class AutkDb {
             layers: [],
         };
 
-        if (params.autoLoadLayers) {
-            const boundaryTableName = `${params.outputTableName}_boundaries`;
-            const osmBoundingBox = await this.getOsmBboxUseCase.exec({
-                osmTableName: boundaryTableName,
-                workspace: this.currentWorkspace,
-                coordinateFormat: targetCrs,
-            });
-            if (!workspaceData.workspaceBoundingBox) {
-                workspaceData.workspaceBoundingBox = osmBoundingBox;
-            }
-
-            let surfaceLayerName: string | null = null;
-            const clippableLayerNames: string[] = [];
-
-            for (const layer of params.autoLoadLayers.layers) {
-                const shouldCropToBbox = layer !== 'buildings';
-
-                const layerParams: LoadOsmLayerParams = {
-                    osmInputTableName: params.outputTableName,
-                    coordinateFormat: sourceCrs,
-                    layer,
-                };
-
-                layerParams.boundingBox = shouldCropToBbox ? osmBoundingBox : undefined;
-
-                const t0 = performance.now();
-                const layerTable = await this.loadOsmLayer({ ...layerParams, workspaceCoordinateFormat: targetCrs });
-                const loadMs = performance.now() - t0;
-
-                const countResult = await this.conn.query(
-                    `SELECT COUNT(*) as cnt FROM ${this.currentWorkspace}.${layerTable.name}`
-                );
-                const featureCount = Number(countResult.toArray()[0].cnt);
-
-                timings.layers.push({ layerName: layerTable.name, layerType: layer, loadMs, featureCount });
-
-                if (layer === 'surface') {
-                    const updatedTable = await this.polygonizeOsmSurfaceUseCase.exec(
-                        { surfaceTableName: layerTable.name, workspace: this.currentWorkspace },
-                        layerTable
-                    );
-                    const tableIndex = workspaceData.tables.findIndex((t) => t.name === layerTable.name);
-                    if (tableIndex !== -1) workspaceData.tables[tableIndex] = updatedTable;
-                    await this.refreshStoredBoundingBox(layerTable.name);
-                    workspaceData.workspaceCropLayer = layerTable.name;
-                    surfaceLayerName = layerTable.name;
-                } else {
-                    clippableLayerNames.push(layerTable.name);
-                }
-            }
-
-            if (surfaceLayerName && clippableLayerNames.length > 0) {
-                for (const layerName of clippableLayerNames) {
-                    const cropGeometry = !layerName.endsWith('_buildings');
-                    await this.clipLayerToLayer(layerName, surfaceLayerName, this.currentWorkspace, cropGeometry);
-                    await this.refreshStoredBoundingBox(layerName);
-                }
-            }
-
-            if (params.autoLoadLayers.dropOsmTable) {
-                for (const table of execResult.tables) {
-                    await this.dropTableUseCase.exec({ tableName: table.name, workspace: this.currentWorkspace });
-                    workspaceData.tables = workspaceData.tables.filter((t) => t.name !== table.name);
-                }
-            }
-
-            console.log(`OSM data loaded and completed in workspace '${this.currentWorkspace}'!`);
+        const boundaryTableName = `${outputTableName}_boundaries`;
+        const osmBoundingBox = await this.getOsmBboxUseCase.exec({
+            osmTableName: boundaryTableName,
+            workspace: this.currentWorkspace,
+            coordinateFormat: targetCrs,
+        });
+        if (!workspaceData.workspaceBoundingBox) {
+            workspaceData.workspaceBoundingBox = osmBoundingBox;
         }
+
+        let surfaceLayerName: string | null = null;
+        const clippableLayerNames: string[] = [];
+
+        for (const layer of params.autoLoadLayers.layers) {
+            const shouldCropToBbox = layer !== 'buildings';
+
+            const layerParams: LoadOsmLayerParams = {
+                osmInputTableName: outputTableName,
+                coordinateFormat: sourceCrs,
+                layer,
+            };
+
+            layerParams.boundingBox = shouldCropToBbox ? osmBoundingBox : undefined;
+
+            const t0 = performance.now();
+            const layerTable = await this.loadOsmLayer({ ...layerParams, workspaceCoordinateFormat: targetCrs });
+            const loadMs = performance.now() - t0;
+
+            const countResult = await this.conn.query(
+                `SELECT COUNT(*) as cnt FROM ${this.currentWorkspace}.${layerTable.name}`
+            );
+            const featureCount = Number(countResult.toArray()[0].cnt);
+
+            timings.layers.push({ layerName: layerTable.name, layerType: layer, loadMs, featureCount });
+
+            if (layer === 'surface') {
+                const updatedTable = await this.polygonizeOsmSurfaceUseCase.exec(
+                    { surfaceTableName: layerTable.name, workspace: this.currentWorkspace },
+                    layerTable
+                );
+                const tableIndex = workspaceData.tables.findIndex((t) => t.name === layerTable.name);
+                if (tableIndex !== -1) workspaceData.tables[tableIndex] = updatedTable;
+                await this.refreshStoredBoundingBox(layerTable.name);
+                workspaceData.workspaceCropLayer = layerTable.name;
+                surfaceLayerName = layerTable.name;
+            } else {
+                clippableLayerNames.push(layerTable.name);
+            }
+        }
+
+        if (surfaceLayerName && clippableLayerNames.length > 0) {
+            for (const layerName of clippableLayerNames) {
+                const cropGeometry = !layerName.endsWith('_buildings');
+                await this.clipLayerToLayer(layerName, surfaceLayerName, this.currentWorkspace, cropGeometry);
+                await this.refreshStoredBoundingBox(layerName);
+            }
+        }
+
+        for (const table of execResult.tables) {
+            await this.dropTableUseCase.exec({ tableName: table.name, workspace: this.currentWorkspace });
+            workspaceData.tables = workspaceData.tables.filter((t) => t.name !== table.name);
+        }
+
+        console.log(`OSM data loaded and completed in workspace '${this.currentWorkspace}'!`);
 
         return timings;
     }

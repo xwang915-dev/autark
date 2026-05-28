@@ -188,7 +188,7 @@ ${bandAssignments}
     private getRasterBands(params: BuildHeatmapParams): Array<RasterBandMetadata & { jsonPath: string }> {
         return (params.groupBy ?? []).map((column, index) => {
             const aggregateFn = (column.aggregateFn ?? 'value').toLowerCase();
-            const sourceKey = aggregateFn === 'count' || aggregateFn === 'weighted' || aggregateFn === 'collect'
+            const sourceKey = aggregateFn === 'count' || aggregateFn === 'weighted'
                 ? params.tableJoinName
                 : `${params.tableJoinName}.${column.column}`;
 

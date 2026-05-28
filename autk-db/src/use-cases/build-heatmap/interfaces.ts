@@ -1,9 +1,19 @@
+import type { AggregateFunction, NearConfig } from '../spatial-join/interfaces';
+
 /**
  * Supported aggregation functions for heatmap cell values.
- *
- * @note 'weighted' and 'collect' are handled specially in raster band generation.
  */
-export type HeatmapAggregateFunction = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'weighted';
+export type HeatmapAggregateFunction = Exclude<AggregateFunction, 'collect'>;
+
+/** Shared heatmap group-by item, aligned with `spatialQuery` except that `collect` is not supported. */
+export interface HeatmapGroupBy {
+    /** Column name to aggregate. Use `'*'` for row-level aggregations like `count`. */
+    column: string;
+    /** Aggregation function to apply on the grouped values. */
+    aggregateFn?: HeatmapAggregateFunction;
+    /** When `true`, normalizes the aggregated value between 0 and 1. */
+    normalize?: boolean;
+}
 
 /**
  * Parameters for building a heatmap from spatially joined data.
@@ -14,16 +24,11 @@ export interface BuildHeatmapParams {
     /** Name of the source table to join against the grid. */
     tableJoinName: string;
     /** NEAR predicate configuration for heatmap generation. */
-    near: { distance: number };
+    near: NearConfig;
     /** Name of the output table that will hold the heatmap result. */
     outputTableName: string;
     /** Optional group-by columns to aggregate into separate raster bands. */
-    groupBy?: Array<{
-        /** Column name to aggregate. Use `'*'` for row-level aggregations like `count`. */
-        column: string;
-        /** Aggregation function to apply on the grouped values. */
-        aggregateFn?: HeatmapAggregateFunction;
-    }>;
+    groupBy?: HeatmapGroupBy[];
     /** Grid dimensions for the heatmap overlay. */
     grid: {
         /** Number of rows in the output grid. */

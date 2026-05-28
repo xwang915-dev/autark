@@ -40,7 +40,6 @@ export class OsmLayersApi {
             outputTableName: 'table_osm',
             autoLoadLayers: {
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<'surface' | 'parks' | 'water' | 'roads'>,
-                dropOsmTable: true,
             },
         });
 

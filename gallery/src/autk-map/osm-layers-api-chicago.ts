@@ -33,7 +33,6 @@ export class OsmLayersApi {
                     'roads',
                     'buildings',
                 ] as Array<'surface' | 'parks' | 'water' | 'roads' | 'buildings'>,
-                dropOsmTable: true,
             },
         });
 

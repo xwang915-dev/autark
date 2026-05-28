@@ -7,4 +7,4 @@
  * @module build-heatmap
  */
 export { BuildHeatmapUseCase } from './use-case';
-export type { BuildHeatmapParams, HeatmapAggregateFunction } from './interfaces';
+export type { BuildHeatmapParams, HeatmapAggregateFunction, HeatmapGroupBy } from './interfaces';

@@ -76,15 +76,16 @@ export class LoadOsmFromOverpassApiUseCase {
    * @throws When required administrative boundaries are missing or network/fetch failures occur.
    * @example
    * const useCase = new LoadOsmFromOverpassApiUseCase(conn, pipeline);
-   * const result = await useCase.exec({ outputTableName: 'osm', queryArea: { geocodeArea: 'Berlin', areas: ['Berlin'] } });
+   * const result = await useCase.exec({ queryArea: { geocodeArea: 'Berlin', areas: ['Berlin'] }, autoLoadLayers: { layers: ['roads'] } });
    */
   async exec(params: LoadOsmParams): Promise<OsmExecResult> {
     const workspace = params.workspace || DEFAULT_WORKSPACE_NAME;
+    const outputTableName = params.outputTableName || 'table_osm';
     const onProgress = params.onProgress;
 
     const combined = await this.fetchCombinedOsmData(
       params.queryArea,
-      params.autoLoadLayers?.layers,
+      params.autoLoadLayers.layers,
       onProgress,
       params.forceRefresh,
     );
@@ -108,24 +109,24 @@ export class LoadOsmFromOverpassApiUseCase {
 
     onProgress?.('processing-osm-data');
     const t0 = performance.now();
-    await this.pipeline.insertOsmDataUsingJson(params.outputTableName, osmData, workspace);
+    await this.pipeline.insertOsmDataUsingJson(outputTableName, osmData, workspace);
     const osmDataProcessingMs = performance.now() - t0;
-    console.log(`Successfully inserted ${osmData.elements.length} OSM elements into ${params.outputTableName}`);
+    console.log(`Successfully inserted ${osmData.elements.length} OSM elements into ${outputTableName}`);
 
     onProgress?.('processing-boundaries');
     const t1 = performance.now();
-    await this.pipeline.insertOsmDataUsingJson(`${params.outputTableName}_boundaries`, boundariesData, workspace, true);
+    await this.pipeline.insertOsmDataUsingJson(`${outputTableName}_boundaries`, boundariesData, workspace, true);
     const boundariesProcessingMs = performance.now() - t1;
-    console.log(`Successfully inserted ${boundariesData.elements.length} boundaries into ${params.outputTableName}_boundaries`);
+    console.log(`Successfully inserted ${boundariesData.elements.length} boundaries into ${outputTableName}_boundaries`);
 
-    const qualifiedTableName = `${workspace}.${params.outputTableName}`;
+    const qualifiedTableName = `${workspace}.${outputTableName}`;
     const tableDescribeResponse = await this.conn.query(`DESCRIBE ${qualifiedTableName}`);
     const columns = getColumnsFromDuckDbTableDescribe(tableDescribeResponse.toArray());
 
     return {
       tables: [
-        { source: 'osm', name: params.outputTableName, columns },
-        { source: 'osm', name: `${params.outputTableName}_boundaries`, columns },
+        { source: 'osm', name: outputTableName, columns },
+        { source: 'osm', name: `${outputTableName}_boundaries`, columns },
       ],
       osmElementCount: osmData.elements.length,
       boundaryElementCount: boundariesData.elements.length,

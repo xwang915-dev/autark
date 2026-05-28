@@ -58,10 +58,7 @@ class OsmLayersApi {
             },
             outputTableName: 'table_osm',
             autoLoadLayers: {
-                layers: ['surface', 'parks', 'water', 'roads', 'buildings'] as Array<
-                    'surface' | 'parks' | 'water' | 'roads' | 'buildings'
-                >,
-                dropOsmTable: true,
+                layers: ['surface', 'parks', 'water', 'roads', 'buildings']
             },
         });
 
@@ -106,7 +103,6 @@ class SpatialJoinNear {
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
-                dropOsmTable: true,
             },
         });
 
@@ -182,7 +178,6 @@ class Heatmap {
                 layers: ['surface', 'parks', 'water', 'roads'] as Array<
                     'surface' | 'parks' | 'water' | 'roads' | 'buildings'
                 >,
-                dropOsmTable: true,
             },
         });
 

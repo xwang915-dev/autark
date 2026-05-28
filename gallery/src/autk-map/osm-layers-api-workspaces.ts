@@ -44,7 +44,6 @@ export class OsmLayersApi {
             outputTableName: 'table_osm',
             autoLoadLayers: {
                 layers: OSM_LAYERS,
-                dropOsmTable: true,
             },
         });
     }
