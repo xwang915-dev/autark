@@ -260,7 +260,7 @@ export class Shadows {
         await this.map.init();
 
         setLoadingState('Rendering layers...', 'Uploading geometry to the GPU.');
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             // Skip the original un-split roads; we use the 20 m version instead.
             if (layerData.name === 'table_osm_roads') continue;
 

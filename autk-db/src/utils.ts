@@ -52,6 +52,12 @@ export function getColumnsFromDuckDbTableDescribe(
  * console.log(value); // { tags: ['secondary', 2] }
  */
 export function toPlain<T = unknown>(value: T): T {
+  if (typeof value === 'bigint') {
+    return (value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)
+      ? Number(value)
+      : value.toString()) as unknown as T;
+  }
+
   if (value === null || typeof value !== 'object') {
     if (typeof value === 'string') {
       const trimmed = value.trim();

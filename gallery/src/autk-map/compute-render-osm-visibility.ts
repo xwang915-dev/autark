@@ -56,7 +56,7 @@ export class ComputeRenderOsmVisibility {
         this.map = new AutkMap(canvas);
         await this.map.init();
 
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             const geojson = layerData.name === 'table_osm_buildings'
                 ? this.buildingsWithVisibility
                 : await this.db.getLayer(layerData.name);

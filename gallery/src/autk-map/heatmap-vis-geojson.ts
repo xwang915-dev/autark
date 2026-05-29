@@ -53,7 +53,7 @@ export class Heatmap {
     protected async loadLayers(): Promise<void> {
         const propertyPath = 'band_1';
 
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of [...this.db.getLayersMetadata(), ...this.db.getRastersMetadata()]) {
             const geojson = await this.db.getLayer(layerData.name);
 
             if (layerData.type === 'raster') {

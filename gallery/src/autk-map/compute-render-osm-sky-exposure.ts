@@ -85,7 +85,7 @@ export class ComputeRenderOsmSkyExposure {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             const geojson = layerData.name === 'table_osm_roads'
                 ? this.roadsWithSky
                 : await this.db.getLayer(layerData.name);

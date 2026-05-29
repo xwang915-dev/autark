@@ -79,7 +79,7 @@ export class ComputeRenderOsmViewScore {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             const geojson = layerData.name === 'table_osm_buildings'
                 ? this.buildings
                 : await this.db.getLayer(layerData.name);

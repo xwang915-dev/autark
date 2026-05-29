@@ -51,7 +51,7 @@ export class OsmLayersApi {
     protected async loadWorkspaceLayers(workspace: string, map: AutkMap): Promise<void> {
         await this.db.setWorkspace(workspace);
 
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             const geojson = await this.db.getLayer(layerData.name);
             map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} from workspace: ${workspace} of type ${layerData.type}`);

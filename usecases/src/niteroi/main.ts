@@ -83,7 +83,7 @@ export class OsmLayersApi {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             const geojson = await this.db.getLayer(layerData.name);
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
         }
@@ -165,7 +165,7 @@ export class OsmLayersApi {
     }
 
     protected async loadGeoTiffLayer(tableName: string): Promise<void> {
-        const geotiff = await this.db.getGeoTiffLayer(tableName);
+        const geotiff = await this.db.getRaster(tableName);
         this.geotiffData = geotiff;
 
         const yearSelect = document.getElementById('yearSelect') as HTMLSelectElement;

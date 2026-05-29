@@ -35,7 +35,7 @@ class CameraAnimationVis {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of [...this.db.getLayersMetadata(), ...this.db.getRastersMetadata()]) {
             const geojson = await this.db.getLayer(layerData.name);
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
@@ -77,7 +77,7 @@ class OsmLayersApi {
         }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of [...this.db.getLayersMetadata(), ...this.db.getRastersMetadata()]) {
             const geojson = await this.db.getLayer(layerData.name);
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
@@ -145,7 +145,7 @@ class SpatialJoinNear {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of [...this.db.getLayersMetadata(), ...this.db.getRastersMetadata()]) {
             const geojson = await this.db.getLayer(layerData.name);
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
             console.log(`Loading layer: ${layerData.name} of type ${layerData.type}`);
@@ -226,7 +226,7 @@ class Heatmap {
     protected async loadLayers(): Promise<void> {
         const propertyPath = 'band_1';
 
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of [...this.db.getLayersMetadata(), ...this.db.getRastersMetadata()]) {
             const geojson = await this.db.getLayer(layerData.name);
 
             if (layerData.type === 'raster') {
@@ -299,7 +299,7 @@ class ComputeFunction {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of [...this.db.getLayersMetadata(), ...this.db.getRastersMetadata()]) {
             const geojson = await this.db.getLayer(layerData.name);
             this.map.loadCollection(layerData.name, { collection: geojson, type: layerData.type });
 

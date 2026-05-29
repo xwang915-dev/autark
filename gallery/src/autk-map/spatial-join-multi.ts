@@ -48,7 +48,7 @@ export class SpatialJoin {
     }
 
     protected async loadLayers(): Promise<void> {
-        for (const layerData of this.db.getLayerTables()) {
+        for (const layerData of this.db.getLayersMetadata()) {
             const collection = await this.db.getLayer(layerData.name);
 
             this.map.loadCollection(layerData.name, { collection, type: layerData.type });

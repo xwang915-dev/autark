@@ -7,7 +7,9 @@ import {
     CsvTable,
     GeotiffTable,
     GeojsonTable,
+    isRasterTable,
     isRenderableTable,
+    isVectorTable,
     JsonTable,
     OsmLayerTable,
     Table,
@@ -21,14 +23,15 @@ import {
     DEFAULT_WORKSPACE_COORDINATE_FORMAT
 } from './consts';
 
-import { getColumnsFromDuckDbTableDescribe, toPlain } from './utils';
+import { getColumnsFromDuckDbTableDescribe } from './utils';
 
 import { DropTableUseCase } from './use-cases/drop-table';
 import { GetLayerBboxUseCase } from './use-cases/get-layer-bbox';
 import { GetOsmBboxUseCase } from './internal/get-osm-bbox/use-case';
 import { BuildHeatmapParams, BuildHeatmapUseCase } from './use-cases/build-heatmap';
 import { GetLayerUseCase } from './use-cases/get-layer';
-import { GetTablesParams, GetTablesOutput, GetTablesUseCase } from './use-cases/get-tables';
+import { GetRasterUseCase } from './use-cases/get-raster';
+import { GetTableOutput, GetTableUseCase } from './use-cases/get-table';
 import { LoadCsvParams, LoadCsvUseCase } from './use-cases/load-csv';
 import { LoadGeojsonParams, LoadGeojsonUseCase } from './use-cases/load-geojson';
 import { LoadGeoTiffParams, LoadGeoTiffUseCase } from './use-cases/load-geotiff';
@@ -117,8 +120,11 @@ export class AutkDb {
     /** Heatmap construction use case that aggregates source values into grid cells. */
     private buildHeatmapUseCase?: BuildHeatmapUseCase;
 
-    /** Table data reader use case for paginated plain-object row output. */
-    private getTablesUseCase?: GetTablesUseCase;
+    /** Table data reader use case for plain-object row output. */
+    private getTableUseCase?: GetTableUseCase;
+
+    /** Raster export use case for packed FeatureCollection output. */
+    private getRasterUseCase?: GetRasterUseCase;
 
     /** Table update use case for replace and keyed update strategies. */
     private updateTableUseCase?: UpdateTableUseCase;
@@ -131,10 +137,10 @@ export class AutkDb {
      * @returns Array of table metadata objects for the current workspace.
      * @throws If the active workspace is missing from the internal registry.
      * @example
-     * const tables = db.tables;
+     * const tables = db.getTablesMetadata();
      * console.log(tables.map((table) => table.name));
      */
-    get tables(): Array<Table> {
+    getTablesMetadata(): Array<Table> {
         return this.getCurrentWorkspaceData().tables;
     }
 
@@ -181,8 +187,9 @@ export class AutkDb {
 
         this.getLayerBboxUseCase = new GetLayerBboxUseCase(this.conn);
         this.getLayerUseCase = new GetLayerUseCase(this.conn);
+        this.getRasterUseCase = new GetRasterUseCase(this.conn);
         this.getOsmBboxUseCase = new GetOsmBboxUseCase(this.conn);
-        this.getTablesUseCase = new GetTablesUseCase(this.conn);
+        this.getTableUseCase = new GetTableUseCase(this.conn);
 
         this.updateTableUseCase = new UpdateTableUseCase(this.db, this.conn);
         this.dropTableUseCase = new DropTableUseCase(this.conn);
@@ -456,7 +463,7 @@ export class AutkDb {
         if (!this.db || !this.conn || !this.loadOsmLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
-        const osmTable = this.tables.find((t) => t.name === params.osmInputTableName);
+        const osmTable = this.getTablesMetadata().find((t) => t.name === params.osmInputTableName);
         if (!osmTable) throw new Error(`Table ${params.osmInputTableName} not found.`);
         if (!(osmTable.source === 'osm' && osmTable.type === undefined))
             throw new Error(`Table ${params.osmInputTableName} is not a raw OSM table.`);
@@ -565,66 +572,21 @@ export class AutkDb {
      * @returns A FeatureCollection with a single feature containing pixel data and resolution metadata.
      * @throws If the database is not initialized, the table is missing, or it is not a GeoTIFF table.
      * @example
-     * const fc = await db.getGeoTiffLayer('temperature');
+     * const fc = await db.getRaster('temperature');
      * map.loadRasterCollection('temperature', {
      *   collection: fc,
      *   property: (cell) => cell.band_1,
      * });
      */
-    async getGeoTiffLayer(tableName: string): Promise<FeatureCollection<null>> {
-        if (!this.db || !this.conn)
+    async getRaster(tableName: string): Promise<FeatureCollection<null>> {
+        if (!this.db || !this.conn || !this.getRasterUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
-        const table = this.tables.find((t) => t.name === tableName);
+        const table = this.getTablesMetadata().find((t) => t.name === tableName);
         if (!table || table.source !== 'geotiff')
             throw new Error(`Table ${tableName} is not a GeoTiff table.`);
 
-        const qualifiedName = `${this.currentWorkspace}.${tableName}`;
-
-        const result = await this.conn.query(`
-      WITH pixels AS (
-        SELECT
-          t.properties AS properties,
-          ST_X(t.geometry) AS px,
-          ST_Y(t.geometry) AS py
-        FROM ${qualifiedName} t
-      )
-      SELECT
-        COUNT(DISTINCT ROUND(px, 8))::INTEGER AS res_x,
-        COUNT(DISTINCT ROUND(py, 8))::INTEGER AS res_y,
-        MIN(px) AS min_lon,
-        MIN(py) AS min_lat,
-        MAX(px) AS max_lon,
-        MAX(py) AS max_lat,
-        list(properties ORDER BY py ASC, px ASC) AS raster
-      FROM pixels
-    `);
-
-        const row = toPlain(result.toArray()[0]?.toJSON());
-        if (!row) throw new Error(`No data found in GeoTiff table ${tableName}.`);
-
-        const { res_x, res_y, min_lon, min_lat, max_lon, max_lat, raster } = row;
-
-        const spacingX = Number(res_x) > 1 ? Math.abs((Number(max_lon) - Number(min_lon)) / (Number(res_x) - 1)) : null;
-        const spacingY = Number(res_y) > 1 ? Math.abs((Number(max_lat) - Number(min_lat)) / (Number(res_y) - 1)) : null;
-        const halfX = (spacingX ?? spacingY ?? 0) / 2;
-        const halfY = (spacingY ?? spacingX ?? 0) / 2;
-
-        return {
-            type: 'FeatureCollection',
-            bbox: [Number(min_lon) - halfX, Number(min_lat) - halfY, Number(max_lon) + halfX, Number(max_lat) + halfY],
-            features: [
-                {
-                    type: 'Feature',
-                    geometry: null,
-                    properties: {
-                        rasterResX: res_x,
-                        rasterResY: res_y,
-                        raster,
-                    },
-                },
-            ],
-        };
+        return this.getRasterUseCase.exec(tableName, this.currentWorkspace);
     }
 
     /**
@@ -643,7 +605,7 @@ export class AutkDb {
         if (!this.db || !this.conn || !this.getLayerUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
-        const layerTable = this.tables.find((t) => t.name === layerTableName);
+        const layerTable = this.getTablesMetadata().find((t) => t.name === layerTableName);
         if (!layerTable) throw new Error(`Table ${layerTableName} not found.`);
         if (!isRenderableTable(layerTable)) throw new Error(`Table ${layerTableName} is not a renderable layer.`);
 
@@ -684,7 +646,7 @@ export class AutkDb {
         if (!this.db || !this.conn || !this.getLayerBboxUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
-        const layerTable = this.tables.find((t) => t.name === layerName);
+        const layerTable = this.getTablesMetadata().find((t) => t.name === layerName);
         if (!layerTable) throw new Error(`Table ${layerName} not found.`);
 
         const hasGeometry = layerTable.columns.find((column) => column.type === 'GEOMETRY');
@@ -707,40 +669,50 @@ export class AutkDb {
     }
 
     /**
-     * Returns all registered tables that can be rendered as map layers.
+     * Returns metadata for all vector layers in the current workspace.
      *
-     * Filters the current workspace registry to tables with a defined renderable `type`.
-     *
-     * @returns Filtered array of OSM, GeoJSON, GeoTIFF, and user layer tables.
+     * @returns Filtered array of vector layer metadata.
      * @throws If the active workspace is missing from the internal registry.
      * @example
-     * const layers = db.getLayerTables();
+     * const layers = db.getLayersMetadata();
      * for (const l of layers) await map.loadCollection(l.name, { collection: await db.getLayer(l.name), type: l.type });
      */
-    getLayerTables(): Array<Table & { type: LayerType }> {
-        return this.tables.filter((table): table is Table & { type: LayerType } => {
-            return isRenderableTable(table);
+    getLayersMetadata(): Array<Table & { type: Exclude<LayerType, 'raster'> }> {
+        return this.getTablesMetadata().filter((table): table is Table & { type: Exclude<LayerType, 'raster'> } => {
+            return isVectorTable(table);
         });
     }
 
     /**
-     * Reads rows from any table as plain JavaScript objects, with optional pagination.
+     * Returns metadata for all raster tables in the current workspace.
      *
-     * @param params - Table name and optional `limit` / `offset`.
+     * @returns Filtered array of raster table metadata.
+     * @throws If the active workspace is missing from the internal registry.
+     */
+    getRastersMetadata(): Array<Table & { type: 'raster' }> {
+        return this.getTablesMetadata().filter((table): table is Table & { type: 'raster' } => {
+            return isRasterTable(table);
+        });
+    }
+
+    /**
+     * Reads all rows from a table as plain JavaScript objects.
+     *
+     * @param tableName - Table name.
      * @returns Array of plain objects where each object represents one row.
      * @throws If the database is not initialized or the table is not found.
      * @example
-     * const rows = await db.getTables({ tableName: 'stations', limit: 100 });
+     * const rows = await db.getTable('stations');
      * console.log(rows[0]);
      */
-    async getTables(params: GetTablesParams): Promise<GetTablesOutput> {
-        if (!this.db || !this.conn || !this.getTablesUseCase)
+    async getTable(tableName: string): Promise<GetTableOutput> {
+        if (!this.db || !this.conn || !this.getTableUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
-        const table = this.tables.find((t) => t.name === params.tableName);
-        if (!table) throw new Error(`Table ${params.tableName} not found.`);
+        const table = this.getTablesMetadata().find((t) => t.name === tableName);
+        if (!table) throw new Error(`Table ${tableName} not found.`);
 
-        return this.getTablesUseCase.exec({ ...params, workspace: this.currentWorkspace });
+        return this.getTableUseCase.exec(tableName, this.currentWorkspace);
     }
 
     /**
@@ -760,7 +732,7 @@ export class AutkDb {
         if (!this.db || !this.conn || !this.updateTableUseCase)
             throw new Error('Database not initialized. Please call init() first.');
 
-        const table = this.tables.find((t) => t.name === params.tableName);
+        const table = this.getTablesMetadata().find((t) => t.name === params.tableName);
         if (!table) throw new Error(`Table ${params.tableName} not found.`);
 
         const result = await this.updateTableUseCase.exec(

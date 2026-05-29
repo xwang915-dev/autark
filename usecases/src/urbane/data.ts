@@ -117,8 +117,8 @@ export class UrbaneData {
         return this.db.getLayer(name);
     }
 
-    public getLayerTables() {
-        return this.db.getLayerTables();
+    public getLayersMetadata() {
+        return this.db.getLayersMetadata();
     }
 
     public async updateLayer(name: string, data: FeatureCollection): Promise<void> {

@@ -59,7 +59,7 @@ export class UrbaneApp {
 
         setLoadingState('Rendering layers...', 'Uploading geometry to the GPU.');
         await this.views.initAllLayers(
-            this.data.getLayerTables(),
+            this.data.getLayersMetadata(),
             (name) => this.data.getLayer(name),
             this.neighs,
             this.roadsWithSky,
