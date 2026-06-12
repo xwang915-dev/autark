@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Autark (Examples)</title>
+    <link rel="stylesheet" href="/src/autk-map/chicago-willis.css">
+</head>
+
+<body>
+    <div id="app">
+        <h2>chicago-willis.ts</h2>
+        <div id="controls">
+            <div>
+                <strong>Reference:</strong>
+                <button onclick="setReference('surface')">Surface</button>
+                <button onclick="setReference('building')">Building</button>
+                <button onclick="setReference('facade')">Facade</button>
+                <button onclick="setReference('roof')">Roof</button>
+                <button onclick="setReference('floor'); document.getElementById('floor-controls').style.display='block'">Floor</button>
+            </div>
+
+            <div id="floor-controls" style="display:none; margin-top:8px;">
+                <div>
+                    <label>Height Position: <span id="height-val">10</span>m</label>
+                    <input id="height-slider" type="range" min="0" max="100" value="10" step="1"
+                        oninput="
+                            document.getElementById('height-val').innerText = this.value;
+                            setFloorParams(+this.value, +document.getElementById('thickness-slider').value);
+                        ">
+                </div>
+                <div>
+                    <label>Thickness: <span id="thickness-val">4</span>m</label>
+                    <input id="thickness-slider" type="range" min="1" max="20" value="4" step="1"
+                        oninput="
+                            document.getElementById('thickness-val').innerText = this.value;
+                            setFloorParams(+document.getElementById('height-slider').value, +this.value);
+                        ">
+                </div>
+            </div>
+
+            <div style="margin-top:8px;">
+                <strong>Manipulation:</strong>
+                <button onclick="setManipulation('translation')">Translation</button>
+                <button onclick="setManipulation('resize')">Resize</button>
+                <button onclick="setManipulation('opacity')">Opacity</button>
+            </div>
+        </div>
+        <canvas></canvas>
+    </div>
+</body>
+<script type="module" src="/src/autk-map/chicago-willis.ts"></script>
+
+</html>
