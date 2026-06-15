@@ -265,7 +265,7 @@ export class TriangulatorBuildings {
 
             // 第二阶段：按法向量 + 点到直线距离分桶
             const ANGLE_THRESHOLD = angleThresholdDeg * Math.PI / 180;
-            const PLANE_DIST_THRESHOLD = 2.0; // 经纬度单位，约 10 米
+            const PLANE_DIST_THRESHOLD = 1.0; // 经纬度单位，约 10 米
 
             // 每个桶记录：法向量、桶内一个代表点
             const bucketNormals: [number, number][] = [];
