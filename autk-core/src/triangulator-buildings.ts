@@ -190,6 +190,12 @@ export class TriangulatorBuildings {
                 continue;
             }
 
+            interface EdgeWithHeight {
+                x0: number; y0: number;
+                x1: number; y1: number;
+                minH: number; maxH: number;
+            }
+            const allEdges: EdgeWithHeight[] = [];
             const nonWallChunks: MeshData[] = [];
 
             for (let i = 0; i < geometries.length; i++) {
@@ -204,7 +210,6 @@ export class TriangulatorBuildings {
                 }
                 const [minH, maxH] = heightInfo;
 
-                // LineString/MultiLineString：不做 facade 分组，直接整体处理
                 if (partGeom.type === 'LineString') {
                     const ring = (partGeom as LineString).coordinates.map(c => TriangulatorBuildings.toLocal(c, origin));
                     const chunks = buildBuildingPartMesh([ring], minH, maxH, partProps);
@@ -231,16 +236,17 @@ export class TriangulatorBuildings {
                     continue;
                 }
 
-                // Polygon/MultiPolygon：在同一 part 内按相邻边法向量分组（不跨 part 合并）
-                const processRings = (rings: [number, number][][]) => {
-                    const wallGroups = buildWallsGrouped(rings, minH, maxH, angleThresholdDeg);
-                    for (const chunk of wallGroups) {
-                        if (chunk.flatCoords.length === 0) continue;
-                        mesh.push({ position: new Float32Array(chunk.flatCoords), indices: new Uint32Array(chunk.flatIds), featureIndex: compId });
-                        comps.push({ nPoints: chunk.flatCoords.length / 3, nTriangles: chunk.flatIds.length / 3, featureIndex: compId, featureId: feature.id });
-                        compId++;
+                const collectRings = (rings: [number, number][][]) => {
+                    for (const ring of rings) {
+                        const n = ring.length - 1;
+                        for (let j = 0; j < n; j++) {
+                            allEdges.push({
+                                x0: ring[j][0], y0: ring[j][1],
+                                x1: ring[j + 1][0], y1: ring[j + 1][1],
+                                minH, maxH,
+                            });
+                        }
                     }
-                    // roof/floor（buildBuildingPartMesh 返回 [walls, floor, roof?]，取 index>=1）
                     const allChunks = buildBuildingPartMesh(rings, minH, maxH, partProps);
                     for (let r = 1; r < allChunks.length; r++) {
                         if (allChunks[r].flatCoords.length === 0) continue;
@@ -249,15 +255,83 @@ export class TriangulatorBuildings {
                 };
 
                 if (partGeom.type === 'Polygon') {
-                    processRings((partGeom as Polygon).coordinates.map(r => r.map(c => TriangulatorBuildings.toLocal(c, origin))));
+                    collectRings((partGeom as Polygon).coordinates.map(r => r.map(c => TriangulatorBuildings.toLocal(c, origin))));
                 } else if (partGeom.type === 'MultiPolygon') {
                     for (const poly of (partGeom as MultiPolygon).coordinates) {
-                        processRings(poly.map(r => r.map(c => TriangulatorBuildings.toLocal(c, origin))));
+                        collectRings(poly.map(r => r.map(c => TriangulatorBuildings.toLocal(c, origin))));
                     }
                 }
             }
 
-            // roof/floor：整个 building 合并成一个 component
+            // 第二阶段：按法向量 + 点到直线距离分桶
+            const ANGLE_THRESHOLD = angleThresholdDeg * Math.PI / 180;
+            const PLANE_DIST_THRESHOLD = 2.0; // 经纬度单位，约 10 米
+
+            // 每个桶记录：法向量、桶内一个代表点
+            const bucketNormals: [number, number][] = [];
+            const bucketPoints: [number, number][] = []; // 桶的代表点
+            const facadeBuckets: EdgeWithHeight[][] = [];
+
+            for (const edge of allEdges) {
+                const dx = edge.x1 - edge.x0;
+                const dy = edge.y1 - edge.y0;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const nx = -dy / len;
+                const ny = dx / len;
+
+                let bestBucket = -1;
+                let bestAngle = Infinity;
+
+                for (let b = 0; b < bucketNormals.length; b++) {
+                    // 法向量夹角（允许正反方向）
+                    const dot = Math.abs(nx * bucketNormals[b][0] + ny * bucketNormals[b][1]);
+                    if (dot <= 0) continue;
+                    const angle = Math.acos(Math.min(1, dot));
+                    if (angle >= ANGLE_THRESHOLD) continue;
+
+                    // 点到直线距离：edge 起点到桶代表直线的垂直距离
+                    // 直线由 bucketPoints[b] 和法向量 bucketNormals[b] 定义
+                    const ex = edge.x0 - bucketPoints[b][0];
+                    const ey = edge.y0 - bucketPoints[b][1];
+                    // 沿法向量方向的投影 = 点到直线的距离
+                    const planeDist = Math.abs(ex * bucketNormals[b][0] + ey * bucketNormals[b][1]); 
+                     
+                    if (planeDist < PLANE_DIST_THRESHOLD && angle < bestAngle) {
+                        bestAngle = angle;
+                        bestBucket = b;
+                    }
+                }
+
+                if (bestBucket >= 0) {
+                    facadeBuckets[bestBucket].push(edge);
+                } else {
+                    bucketNormals.push([nx, ny]);
+                    bucketPoints.push([edge.x0, edge.y0]);
+                    facadeBuckets.push([edge]);
+                }
+            }
+
+            // 每个桶 → 一个 component，各边保留自己的 minH/maxH
+            for (const bucket of facadeBuckets) {
+                const flatCoords: number[] = [];
+                const flatIds: number[] = [];
+                for (const { x0, y0, x1, y1, minH, maxH } of bucket) {
+                    const base = flatCoords.length / 3;
+                    flatCoords.push(
+                        x0, y0, minH,
+                        x1, y1, minH,
+                        x1, y1, maxH,
+                        x0, y0, maxH,
+                    );
+                    flatIds.push(base, base + 1, base + 2, base, base + 2, base + 3);
+                }
+                if (flatCoords.length === 0) continue;
+                mesh.push({ position: new Float32Array(flatCoords), indices: new Uint32Array(flatIds), featureIndex: compId });
+                comps.push({ nPoints: flatCoords.length / 3, nTriangles: flatIds.length / 3, featureIndex: compId, featureId: feature.id });
+                compId++;
+            }
+
+            // roof/floor
             if (nonWallChunks.length > 0) {
                 let nPoints = 0;
                 let nTriangles = 0;
