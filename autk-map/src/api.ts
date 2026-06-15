@@ -61,6 +61,11 @@ export interface LoadCollectionParams {
      */
     allowZeroHeightBuildings?: boolean;
     /**
+     * When `true`, building walls are triangulated per facade plane so that each
+     * distinct wall face receives its own pickable component ID.
+     */
+    facadeMode?: boolean;
+    /**
      * Property accessor used to derive layer values.
      *
      * Use a dot-path string accessor such as `properties.shape_area`.

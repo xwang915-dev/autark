@@ -118,7 +118,7 @@ export class LoadOsmFromOverpassApiUseCase {
     await this.pipeline.insertOsmDataUsingJson(`${outputTableName}_boundaries`, boundariesData, workspace, true);
     const boundariesProcessingMs = performance.now() - t1;
     console.log(`Successfully inserted ${boundariesData.elements.length} boundaries into ${outputTableName}_boundaries`);
-
+    console.log('[autk-db] Boundary names:',boundariesData.elements.map((b: any) => b.tags?.name));
     const qualifiedTableName = `${workspace}.${outputTableName}`;
     const tableDescribeResponse = await this.conn.query(`DESCRIBE ${qualifiedTableName}`);
     const columns = getColumnsFromDuckDbTableDescribe(tableDescribeResponse.toArray());
@@ -215,6 +215,7 @@ export class LoadOsmFromOverpassApiUseCase {
     onProgress?.('downloading-osm-data');
     const boundariesData: OverpassApiResponse = await boundariesResponse.json();
     console.log(`[autk-db] Boundaries: ${boundariesData.elements?.length ?? 0} elements`);
+    console.log('[autk-db] Boundary details:',boundariesData.elements.map((b: any) => ({id: b.id,name: b.tags?.name,boundary: b.tags?.boundary,place: b.tags?.place,admin_level: b.tags?.admin_level,})));
     let combined: OverpassApiResponse = boundariesData;
 
     // Compute the area bbox once from boundary data only — independent of which

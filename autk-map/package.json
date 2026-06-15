@@ -16,12 +16,12 @@
     "dist"
   ],
   "main": "./dist/autk-map.umd.cjs",
-  "module": "./dist/autk-map.js",
+  "module": "./src/index.ts",
   "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/autk-map.js",
+      "import": "./src/index.ts",
       "require": "./dist/autk-map.umd.cjs"
     }
   },

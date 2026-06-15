@@ -240,19 +240,12 @@
 import { AutkDb } from '@urban-toolkit/autk-db';
 import { AutkMap, MapEvent, MapStyle } from '@urban-toolkit/autk-map';
 
-const URL = (import.meta as any).env.BASE_URL;
-
 export class ChicagoWillis {
     protected map!: AutkMap;
     protected db!: AutkDb;
 
     private currentReference: 'surface' | 'building' | 'facade' | 'roof' | 'floor' = 'building';
-    private currentManipulation: 'translation' | 'resize' | 'opacity' = 'translation';
-
     private selectedBuildingIndex: number | null = null;
-    private selectedFacadeIndex: number | null = null;
-    private selectedFacadeStartIndex: number | null = null;
-    private selectedFacadeEndIndex: number | null = null;
     private originalBuildingsGeojson: any = null;
 
     private floorHeightPosition: number = 10;
@@ -320,23 +313,9 @@ export class ChicagoWillis {
                 this.updateFloorSlice();
 
             } else if (this.currentReference === 'facade' && layerId === 'table_osm_buildings') {
-                const start = this.selectedFacadeStartIndex;
-                const end = this.selectedFacadeEndIndex;
-                // facade 已分段后，picked 落在分段范围内 = 选中某面墙
-                if (start !== null && end !== null && picked >= start && picked <= end) {
-                    this.selectedFacadeIndex = picked;
-                    this.map.setHighlightedIds('table_osm_buildings', [picked]);
-                    console.log(`Facade selected: ${picked}`);
-                } else {
-                    // 选中的是其他建筑，重新分段
-                    this.selectedBuildingIndex = picked;
-                    this.selectedFacadeIndex = null;
-                    this.selectedFacadeStartIndex = null;
-                    this.selectedFacadeEndIndex = null;
-                    this.map.setHighlightedIds('table_osm_buildings', [picked]);
-                    console.log(`Building selected for facade: ${picked}`);
-                    this.buildFacadeLayer();
-                }
+                // In facadeMode every wall face is its own component — just highlight it directly.
+                this.map.setHighlightedIds('table_osm_buildings', [picked]);
+                console.log(`Facade face selected: component ${picked}`);
             }
         });
     }
@@ -456,87 +435,20 @@ export class ChicagoWillis {
     }
 
     private async buildFacadeLayer(): Promise<void> {
-        if (this.selectedBuildingIndex === null) return;
-
         const buildingsGeojson = await this.db.getLayer('table_osm_buildings');
-        const building = buildingsGeojson.features[this.selectedBuildingIndex] as any;
-        if (!building) return;
 
-        const geometries: any[] = building.geometry?.geometries ?? [];
-        const parts: any[] = building.properties?.parts ?? [];
-
-        const FLOOR_HEIGHT = 3.4;
-        const FALLBACK_HEIGHT = 24;
-        const resolveHeight = (p: any): number => {
-            if (p?.height) return parseFloat(p.height) || 0;
-            if (p?.levels) return (parseFloat(p.levels) || 0) * FLOOR_HEIGHT;
-            if (p?.['building:levels']) return (parseFloat(p['building:levels']) || 0) * FLOOR_HEIGHT;
-            return 0;
-        };
-
-        // 把选中建筑的每条边拆成独立 Feature，直接注入 table_osm_buildings。
-        // 不创建新 layer，利用 Autark 已有 picking 机制，零 z-fighting。
-        const facadeFeatures: any[] = [];
-
-        for (let i = 0; i < geometries.length; i++) {
-            const geom = geometries[i];
-            if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') continue;
-
-            const rawProps = (parts.length > 0 ? parts[i] : null) ?? building.properties ?? {};
-            let h = resolveHeight(rawProps);
-            if (h === 0) h = resolveHeight(building.properties);
-            if (h === 0) h = FALLBACK_HEIGHT;
-            const minH = parseFloat(rawProps.min_height) || 0;
-            const partProps = { ...rawProps, height: h, min_height: minH };
-
-            const rings: number[][][] = geom.type === 'Polygon'
-                ? [geom.coordinates[0]]
-                : geom.coordinates.map((poly: any) => poly[0]);
-
-            for (const ring of rings) {
-                for (let j = 0; j < ring.length - 1; j++) {
-                    facadeFeatures.push({
-                        type: 'Feature',
-                        geometry: {
-                            type: 'GeometryCollection',
-                            geometries: [{ type: 'LineString', coordinates: [ring[j], ring[j + 1]] }],
-                        },
-                        properties: { ...partProps, parts: [partProps] },
-                    });
-                }
-            }
-        }
-
-        if (facadeFeatures.length === 0) return;
-
-        // 保存原始数据，切换模式时恢复
         this.originalBuildingsGeojson = buildingsGeojson;
 
-        // 重建 FeatureCollection：原建筑替换成拆分后的 facade features
-        const newFeatures = [
-            ...buildingsGeojson.features.slice(0, this.selectedBuildingIndex),
-            ...facadeFeatures,
-            ...buildingsGeojson.features.slice(this.selectedBuildingIndex + 1),
-        ];
-        const newCollection = { type: 'FeatureCollection', features: newFeatures };
-
-        // 直接替换 table_osm_buildings，不创建新 layer，picking 天然工作
         this.map.removeLayer('table_osm_buildings');
         this.map.loadCollection('table_osm_buildings', {
-            collection: newCollection as any,
+            collection: buildingsGeojson as any,
             type: 'buildings',
+            facadeMode: true,
+            allowZeroHeightBuildings: false, 
         });
         this.map.updateRenderInfo('table_osm_buildings', { isPick: true });
 
-        // facade features 在新 collection 里从 selectedBuildingIndex 开始
-        this.selectedFacadeStartIndex = this.selectedBuildingIndex;
-        this.selectedFacadeEndIndex = this.selectedBuildingIndex + facadeFeatures.length - 1;
-
-        console.log(`Facade segmented: ${facadeFeatures.length} faces starting at index ${this.selectedBuildingIndex}`);
-    }
-
-    private applyManipulation(pickedId: number): void {
-        console.log(`Applying manipulation: ${this.currentManipulation} to id: ${pickedId}`);
+        console.log(`Facade mode active — per-face picking enabled`);
     }
 
     public setReference(type: 'surface' | 'building' | 'facade' | 'roof' | 'floor'): void {
@@ -553,15 +465,12 @@ export class ChicagoWillis {
                 type: 'buildings',
             });
             this.originalBuildingsGeojson = null;
-        } else {
+        } else if (type !== 'facade') {
             this.map.updateRenderInfo('table_osm_buildings', { isPick: false });
             this.map.clearHighlightedIds('table_osm_buildings');
         }
 
         this.selectedBuildingIndex = null;
-        this.selectedFacadeIndex = null;
-        this.selectedFacadeStartIndex = null;
-        this.selectedFacadeEndIndex = null;
 
         try { this.map.removeLayer('floor_slice'); } catch (_) { }
 
@@ -572,14 +481,13 @@ export class ChicagoWillis {
         } else if (type === 'floor') {
             this.map.updateRenderInfo('table_osm_buildings', { isPick: true });
         } else if (type === 'facade') {
-            this.map.updateRenderInfo('table_osm_buildings', { isPick: true });
+            this.buildFacadeLayer();
         }
 
         console.log(`Reference set to: ${type}`);
     }
 
     public setManipulation(type: 'translation' | 'resize' | 'opacity'): void {
-        this.currentManipulation = type;
         console.log(`Manipulation set to: ${type}`);
     }
 }

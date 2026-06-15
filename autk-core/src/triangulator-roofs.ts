@@ -129,6 +129,178 @@ export function buildWalls(rings: Vec2[][], minH: number, maxH: number): MeshDat
     return { flatCoords, flatIds };
 }
 
+/**
+ * Generates vertical wall quads grouped by face normal direction.
+ *
+ * Adjacent edges whose outward normals differ by less than `angleThresholdDeg`
+ * are merged into the same group and share one `MeshData` entry. This allows
+ * callers to assign a unique picking ID per facade plane rather than per edge.
+ *
+ * @param rings - Polygon rings in local planar coordinates.
+ * @param minH - Wall base elevation.
+ * @param maxH - Wall top elevation.
+ * @param angleThresholdDeg - Max angle (degrees) between adjacent normals to be considered the same facade.
+ * @returns Array of MeshData, one per facade group.
+ */
+/**
+ * Finds dominant facade directions from all ring edges, weighted by edge length.
+ *
+ * Normals are folded into [0°, 180°) so that opposite-facing walls share the
+ * same dominant direction bucket. Buckets are spaced `bucketDeg` apart.
+ * Returns unit normal vectors for the top dominant directions.
+ */
+export function dominantNormals(allNormals: Vec2[], edgeLens: number[], bucketDeg = 15): Vec2[] {
+    const buckets = Math.round(180 / bucketDeg);
+    const weight = new Float64Array(buckets);
+    const sumX = new Float64Array(buckets);
+    const sumY = new Float64Array(buckets);
+
+    for (let i = 0; i < allNormals.length; i++) {
+        const [nx, ny] = allNormals[i];
+        // Fold into [0, π): normals pointing in opposite directions map to same bucket
+        let angle = Math.atan2(ny, nx);
+        if (angle < 0) angle += Math.PI;
+        const b = Math.min(buckets - 1, Math.floor(angle / Math.PI * buckets));
+        weight[b] += edgeLens[i];
+        sumX[b] += nx * edgeLens[i];
+        sumY[b] += ny * edgeLens[i];
+    }
+
+    // Collect non-empty buckets sorted by weight descending
+    const result: Vec2[] = [];
+    for (let b = 0; b < buckets; b++) {
+        if (weight[b] === 0) continue;
+        const len = Math.sqrt(sumX[b] * sumX[b] + sumY[b] * sumY[b]) || 1;
+        result.push([sumX[b] / len, sumY[b] / len]);
+    }
+    return result;
+}
+
+export function buildWallsGrouped(rings: Vec2[][], minH: number, maxH: number, angleThresholdDeg = 30): MeshData[] {
+    const cosThreshold = Math.cos(angleThresholdDeg * Math.PI / 180);
+    const groups: MeshData[] = [];
+
+    for (let ri = 0; ri < rings.length; ri++) {
+        let open = normalizeRing(rings[ri]) as Vec2[];
+        const area = computeRingArea(open);
+        if (ri === 0 && area < 0) open = [...open].reverse();
+        if (ri > 0 && area > 0) open = [...open].reverse();
+
+        const n = open.length;
+        if (n < 3) continue;
+
+        // Compute outward normal for each edge
+        const normals: Vec2[] = [];
+        for (let i = 0; i < n - 1; i++) {
+            const dx = open[i + 1][0] - open[i][0];
+            const dy = open[i + 1][1] - open[i][1];
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            normals.push([-dy / len, dx / len]);
+        }
+
+        // Walk edges: start a new group whenever the turn from the previous edge exceeds the threshold.
+        // dot(n_prev, n_cur) < cosThreshold means the angle between them is > angleThresholdDeg.
+        let currentGroup: MeshData = { flatCoords: [], flatIds: [] };
+        groups.push(currentGroup);
+
+        for (let i = 0; i < n - 1; i++) {
+            // Break into a new group when the turn angle exceeds threshold
+            if (i > 0) {
+                const [px, py] = normals[i - 1];
+                const [cx, cy] = normals[i];
+                const dot = px * cx + py * cy;
+                if (dot < cosThreshold) {
+                    currentGroup = { flatCoords: [], flatIds: [] };
+                    groups.push(currentGroup);
+                }
+            }
+
+            const [x0, y0] = open[i];
+            const [x1, y1] = open[i + 1];
+            const base = currentGroup.flatCoords.length / 3;
+            currentGroup.flatCoords.push(x0, y0, minH, x1, y1, minH, x1, y1, maxH, x0, y0, maxH);
+            currentGroup.flatIds.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        }
+    }
+
+    return groups.filter(g => g.flatCoords.length > 0);
+}
+
+/**
+ * Same as `buildWallsGrouped` but uses a pre-computed set of dominant normals
+ * instead of deriving them from the rings themselves.
+ *
+ * This lets callers compute dominant directions across *all parts of a building*
+ * first, then apply those directions consistently when processing each part —
+ * so walls on the same facade plane are merged across part boundaries.
+ */
+/**
+ * Groups wall edges by dominant normal direction (ignoring adjacency).
+ *
+ * All edges whose outward normal is closest to the same dominant direction
+ * are merged into one MeshData, regardless of whether they are adjacent in
+ * the ring. This ensures that all wall segments facing the same direction
+ * (e.g. all north-facing segments across multiple parts) share one picking ID.
+ *
+ * Edges that don't match any dominant direction within `angleThresholdDeg`
+ * each get their own individual group.
+ */
+export function buildWallsWithDominants(
+    rings: Vec2[][],
+    minH: number,
+    maxH: number,
+    domNormals: Vec2[],
+    angleThresholdDeg = 45,
+): MeshData[] {
+    const threshold = angleThresholdDeg * Math.PI / 180;
+
+    // One MeshData bucket per dominant direction, plus overflow for unmatched edges
+    const buckets: MeshData[] = domNormals.map(() => ({ flatCoords: [], flatIds: [] }));
+
+    for (let ri = 0; ri < rings.length; ri++) {
+        let open = normalizeRing(rings[ri]) as Vec2[];
+        const area = computeRingArea(open);
+        if (ri === 0 && area < 0) open = [...open].reverse();
+        if (ri > 0 && area > 0) open = [...open].reverse();
+        const n = open.length;
+
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            const dx = open[j][0] - open[i][0];
+            const dy = open[j][1] - open[i][1];
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const nx = -dy / len;
+            const ny = dx / len;
+
+            // Find closest dominant direction
+            let bestDir = -1;
+            let bestDot = -Infinity;
+            for (let d = 0; d < domNormals.length; d++) {
+                const dot = Math.abs(nx * domNormals[d][0] + ny * domNormals[d][1]);
+                if (dot > bestDot) { bestDot = dot; bestDir = d; }
+            }
+
+            // Pick the bucket (or create an individual one for unmatched edges)
+            let bucket: MeshData;
+            if (bestDir >= 0 && Math.acos(Math.min(1, bestDot)) <= threshold) {
+                bucket = buckets[bestDir];
+            } else {
+                bucket = { flatCoords: [], flatIds: [] };
+                buckets.push(bucket);
+            }
+
+            const [x0, y0] = open[i];
+            const [x1, y1] = open[j];
+            const base = bucket.flatCoords.length / 3;
+            bucket.flatCoords.push(x0, y0, minH, x1, y1, minH, x1, y1, maxH, x0, y0, maxH);
+            bucket.flatIds.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        }
+    }
+
+    // Return only non-empty buckets
+    return buckets.filter(b => b.flatCoords.length > 0);
+}
+
 // ─── Flat roof ────────────────────────────────────────────────────────────────
 
 /**
@@ -1142,4 +1314,124 @@ export function buildBuildingPartMesh(
 
     meshes.push(roof);
     return meshes;
+}
+
+/**
+ * Same as `buildBuildingPartMesh` but returns each facade wall group as its own
+ * element in the array. Callers can assign a distinct component ID per wall group,
+ * enabling per-face picking without creating new geometry.
+ *
+ * Wall groups are computed by `buildWallsGrouped` (edges with similar outward
+ * normals share a group). Roof and optional floor chunks follow wall groups at
+ * the end of the array, and they also get their own array entries so component
+ * IDs remain contiguous.
+ *
+ * @param rings - `[outerRing, ...holes]` coordinates relative to the origin.
+ * @param minH - Bottom of the walls.
+ * @param maxH - Top of the walls.
+ * @param props - OSM properties for this building part.
+ * @param angleThresholdDeg - Max normal-angle difference for edges to share a facade group.
+ * @returns Array of MeshData where each wall-face group is a separate entry.
+ */
+export function buildBuildingPartMeshGrouped(
+    rings: Vec2[][],
+    minH: number,
+    maxH: number,
+    props: GeoJsonProperties,
+    angleThresholdDeg = 30,
+): MeshData[] {
+    const info = extractRoofInfo(props);
+
+    let roofH = info.height;
+    if (roofH <= 0 && info.shape !== 'flat') {
+        roofH = heightFromAngle(normalizeRing(rings[0]) as Vec2[], info.angle);
+    }
+
+    if (info.shape !== 'flat') {
+        const maxRoofH = heightFromAngle(normalizeRing(rings[0]) as Vec2[], 60);
+        if (maxRoofH > 0 && roofH > maxRoofH) roofH = maxRoofH;
+    }
+
+    const outer = normalizeRing(rings[0]) as Vec2[];
+
+    // Each wall group is a separate MeshData entry for independent picking IDs
+    const meshes: MeshData[] = buildWallsGrouped(rings, minH, maxH, angleThresholdDeg);
+
+    if (minH > 0) {
+        meshes.push(flatFloor(rings, minH));
+    }
+
+    let roof: MeshData;
+
+    switch (info.shape) {
+        case 'round':
+            roof = roundRoof(outer, maxH, roofH);
+            break;
+        case 'cone':
+        case 'pyramidal':
+        case 'pyramid':
+            roof = pyramidRoof(outer, maxH, roofH);
+            break;
+        case 'dome':
+            roof = domeRoof(outer, maxH, roofH);
+            break;
+        case 'skillion':
+            roof = skillionRoof(outer, maxH, roofH, info.direction);
+            break;
+        case 'gabled':
+        case 'hipped':
+        case 'half-hipped':
+        case 'mansard':
+        case 'saltbox': {
+            const result = skeletonRoof(outer, maxH, roofH, info, rings);
+            if (result) {
+                roof = result;
+            } else {
+                roof = flatRoof(rings, maxH);
+            }
+            break;
+        }
+        case 'flat':
+        default:
+            roof = flatRoof(rings, maxH);
+            break;
+    }
+
+    meshes.push(roof);
+    return meshes;
+}
+
+export function buildRoofAndFloor(
+    rings: Vec2[][],
+    minH: number,
+    maxH: number,
+    props: GeoJsonProperties,
+): MeshData[] {
+    const info = extractRoofInfo(props);
+    let roofH = info.height;
+    if (roofH <= 0 && info.shape !== 'flat') {
+        roofH = heightFromAngle(normalizeRing(rings[0]) as Vec2[], info.angle);
+    }
+    if (info.shape !== 'flat') {
+        const maxRoofH = heightFromAngle(normalizeRing(rings[0]) as Vec2[], 60);
+        if (maxRoofH > 0 && roofH > maxRoofH) roofH = maxRoofH;
+    }
+    const outer = normalizeRing(rings[0]) as Vec2[];
+    const result: MeshData[] = [];
+
+    if (minH > 0) result.push(flatFloor(rings, minH));
+
+    switch (info.shape) {
+        case 'round': result.push(roundRoof(outer, maxH, roofH)); break;
+        case 'cone': case 'pyramidal': case 'pyramid': result.push(pyramidRoof(outer, maxH, roofH)); break;
+        case 'dome': result.push(domeRoof(outer, maxH, roofH)); break;
+        case 'skillion': result.push(skillionRoof(outer, maxH, roofH, info.direction)); break;
+        case 'gabled': case 'hipped': case 'half-hipped': case 'mansard': case 'saltbox': {
+            const sk = skeletonRoof(outer, maxH, roofH, info, rings);
+            result.push(sk ?? flatRoof(rings, maxH));
+            break;
+        }
+        default: result.push(flatRoof(rings, maxH)); break;
+    }
+    return result;
 }

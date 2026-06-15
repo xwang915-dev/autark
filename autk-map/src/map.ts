@@ -220,7 +220,7 @@ export class AutkMap {
      * @param params.allowZeroHeightBuildings Optional flag to treat building zero-height extrusions.
      * @throws Never throws. Errors are logged to the console.
      */
-    loadCollection(id: string, { collection, type = null, property, allowZeroHeightBuildings = false }: LoadCollectionParams): void {
+    loadCollection(id: string, { collection, type = null, property, allowZeroHeightBuildings = false, facadeMode = false }: LoadCollectionParams): void {
         if (!this.layerManager.hasOrigin) {
             this.layerManager.initializeOrigin(collection);
         }
@@ -246,7 +246,7 @@ export class AutkMap {
                 break;
 
             case 'buildings':
-                this.createBuildingsLayer(id, collection as FeatureCollection, sType, typeof property === 'string' ? property : undefined, allowZeroHeightBuildings);
+                this.createBuildingsLayer(id, collection as FeatureCollection, sType, typeof property === 'string' ? property : undefined, allowZeroHeightBuildings, facadeMode);
                 break;
 
             case 'raster':
@@ -1095,7 +1095,7 @@ export class AutkMap {
      * @param property Optional value extractor used to initialize thematic data.
      * @returns Nothing. The layer is created when triangulation succeeds.
       */
-    private createBuildingsLayer(layerName: string, geojson: FeatureCollection, typeLayer: LayerType, property?: string, allowZeroHeightBuildings?: boolean) {
+    private createBuildingsLayer(layerName: string, geojson: FeatureCollection, typeLayer: LayerType, property?: string, allowZeroHeightBuildings?: boolean, facadeMode?: boolean) {
         const layerInfo: LayerInfo = {
             id: `${layerName}`,
             zIndex: this._layerManager.computeZindex(typeLayer),
@@ -1110,7 +1110,9 @@ export class AutkMap {
             isSkip: false,
         };
 
-        const layerMesh = TriangulatorBuildings.buildMesh(geojson, this.layerManager.origin, allowZeroHeightBuildings);
+        const layerMesh = facadeMode
+            ? TriangulatorBuildings.buildMeshFacade(geojson, this.layerManager.origin, allowZeroHeightBuildings)
+            : TriangulatorBuildings.buildMesh(geojson, this.layerManager.origin, allowZeroHeightBuildings);
         if (layerMesh[0].length === 0 || layerMesh[1].length === 0) {
             console.error('Invalid Building Layer.');
             return;

@@ -1,4 +1,5 @@
 import { ViteDevServer, defineConfig } from 'vite';
+import glsl from 'vite-plugin-glsl';
 
 export function pluginWatchNodeModules(modules: string[]) {
   const pattern = `/node_modules\\/(?!${modules.join('|')}).*/`;
@@ -15,6 +16,7 @@ export function pluginWatchNodeModules(modules: string[]) {
 
 export default defineConfig({
   plugins: [
+    glsl(),
     pluginWatchNodeModules([
       '@urban-toolkit/autk-core',
       '@urban-toolkit/autk-map',
